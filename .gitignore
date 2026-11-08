@@ -1,0 +1,8 @@
+# local dev artifacts — never commit
+.wrangler/
+wrangler.toml
+node_modules/
+*.sqlite
+*.sqlite-journal
+.DS_Store
+_worker.bundle

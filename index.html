@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d1b3e" />
+  <meta name="description" content="Souls Register — capture saved souls at the CfaN Calabar 2026 crusade, works offline, auto-syncs to one central dump, exports CSV for bulk SMS." />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" type="image/png" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Souls Register — Calabar Crusade</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header id="appHeader">
+    <div class="brand">
+      <img src="icons/icon-192.png" alt="" class="brand-icon" />
+      <div class="brand-text">
+        <h1>Souls Register</h1>
+        <span class="brand-sub" id="brandSub">CfaN · Calabar 2026</span>
+      </div>
+    </div>
+    <span id="netPill" class="pill pill-offline" title="Network status">Offline</span>
+  </header>
+
+  <main id="main">
+    <!-- ============ WELCOME / LANDING ============ -->
+    <section id="view-welcome" class="view welcome" aria-label="Welcome">
+      <div class="welcome-hero">
+        <div class="welcome-cross">✝</div>
+        <p class="welcome-kicker">Christ for all Nations presents</p>
+        <h2 class="welcome-title">THE GREAT<br />GOSPEL CRUSADE</h2>
+        <p class="welcome-evangelist">with Evangelist <b>Daniel Kolenda</b><br />
+          <span class="welcome-muted">Successor of Evangelist Reinhard Bonnke</span></p>
+
+        <div class="welcome-when">
+          <div class="when-row"><span class="when-ico">📅</span><div><b>November 12 – 15, 2026</b><small>Thursday – Sunday</small></div></div>
+          <div class="when-row"><span class="when-ico">🕓</span><div><b>4:00 PM daily</b><small>Come early · Bring someone</small></div></div>
+          <div class="when-row"><span class="when-ico">📍</span><div><b>UNICROSS Field, Ekpo Abasi</b><small>(formerly CRUTECH) · Calabar, Cross River State</small></div></div>
+        </div>
+
+        <div id="countdown" class="countdown">
+          <div class="cd-box"><b id="cdDays">–</b><span>days</span></div>
+          <div class="cd-box"><b id="cdHours">–</b><span>hrs</span></div>
+          <div class="cd-box"><b id="cdMins">–</b><span>mins</span></div>
+          <div class="cd-label" id="cdLabel">until the crusade begins</div>
+        </div>
+
+        <p class="welcome-slogan">“Africa shall be saved!”</p>
+
+        <button id="startCaptureBtn" class="btn btn-gold big">Start capturing souls →</button>
+        <p class="welcome-hint">Set your name once in Settings — then just fill the form and tap SAVE for every soul.</p>
+
+        <div class="how-it-works">
+          <h3>How this app works</h3>
+          <div class="hiw-row"><span class="hiw-ico">📱</span>
+            <div><b>Capture on the spot — even offline</b>
+            <small>No network at the field? No problem. Every soul is saved on the phone instantly and flows out the moment internet returns.</small></div>
+          </div>
+          <div class="hiw-row"><span class="hiw-ico">☁️</span>
+            <div><b>One central dump — zero Google Sheet stress</b>
+            <small>Every phone's entries compile themselves into one secure central register. No Apps Script, no add-ons, no copying — it just happens.</small></div>
+          </div>
+          <div class="hiw-row"><span class="hiw-ico">💬</span>
+            <div><b> Bulk-SMS CSV in one tap</b>
+            <small>The leader dashboard shows the live count of souls and downloads the ready-made phone-number CSV for follow-up texts.</small></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ CAPTURE ============ -->
+    <section id="view-capture" class="view active" aria-label="Capture">
+      <div id="syncBanner" class="banner hidden"></div>
+
+      <div class="counter-strip">
+        <div class="counter"><b id="statDevice">0</b><span>On this phone</span></div>
+        <div class="counter"><b id="statPending">0</b><span>Waiting sync</span></div>
+        <div class="counter"><b id="statTotal">—</b><span>Central dump</span></div>
+      </div>
+
+      <form id="captureForm" autocomplete="off" novalidate>
+        <div class="form-grid">
+          <div class="field">
+            <label for="firstName">First name <i>*</i></label>
+            <input id="firstName" name="firstName" type="text" placeholder="e.g. Grace" enterkeyhint="next" required />
+          </div>
+          <div class="field">
+            <label for="surname">Surname <i>*</i></label>
+            <input id="surname" name="surname" type="text" placeholder="e.g. Okafor" enterkeyhint="next" required />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="middleName">Middle name <small>(optional)</small></label>
+          <input id="middleName" name="middleName" type="text" placeholder="e.g. Ifeoma" enterkeyhint="next" />
+        </div>
+
+        <div class="field">
+          <label for="phone">Phone number <i>*</i></label>
+          <input id="phone" name="phone" type="tel" inputmode="tel" placeholder="e.g. 0803 123 4567" enterkeyhint="next" required />
+          <div id="phoneWarn" class="phone-warn hidden">⚠ This number is already saved on this phone.</div>
+        </div>
+
+        <div class="field">
+          <label>Gender <i>*</i></label>
+          <div class="segmented" id="genderGroup" role="radiogroup">
+            <label class="seg"><input type="radio" name="gender" value="Male" /><span>Male</span></label>
+            <label class="seg"><input type="radio" name="gender" value="Female" /><span>Female</span></label>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Age group</label>
+          <div class="chips" id="ageGroup" role="radiogroup">
+            <label class="chip"><input type="radio" name="age" value="0-12" /><span>0–12</span></label>
+            <label class="chip"><input type="radio" name="age" value="13-17" /><span>13–17</span></label>
+            <label class="chip"><input type="radio" name="age" value="18-24" /><span>18–24</span></label>
+            <label class="chip"><input type="radio" name="age" value="25-34" /><span>25–34</span></label>
+            <label class="chip"><input type="radio" name="age" value="35-44" /><span>35–44</span></label>
+            <label class="chip"><input type="radio" name="age" value="45+" /><span>45+</span></label>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Decision</label>
+          <div class="segmented" id="decisionGroup" role="radiogroup">
+            <label class="seg"><input type="radio" name="decision" value="Salvation" checked /><span>Salvation</span></label>
+            <label class="seg"><input type="radio" name="decision" value="Rededication" /><span>Rededication</span></label>
+            <label class="seg"><input type="radio" name="decision" value="Other" /><span>Other</span></label>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="address">Address <small>(optional)</small></label>
+          <input id="address" name="address" type="text" placeholder="Street, area, Calabar" enterkeyhint="next" />
+        </div>
+
+        <div class="field">
+          <label for="prayer">Prayer request <small>(optional)</small></label>
+          <textarea id="prayer" name="prayer" rows="2" placeholder="Anything they want prayer for…"></textarea>
+        </div>
+
+        <button type="button" id="counsellorChip" class="counsellor-chip" title="Tap to change in Settings">
+          👤 Counsellor: <b id="counsellorName">not set</b> <span>· tap to change</span>
+        </button>
+
+        <button type="submit" id="saveBtn" class="save-btn">SAVE&nbsp;✓</button>
+        <div id="saveFlash" class="save-flash hidden" aria-live="polite"></div>
+      </form>
+    </section>
+
+    <!-- ============ RECORDS ============ -->
+    <section id="view-records" class="view" aria-label="Records">
+      <div class="toolbar">
+        <input id="searchInput" type="search" placeholder="🔍 Search name or phone…" />
+        <div class="toolbar-actions">
+          <button id="exportCsvBtn" class="btn btn-outline">⬇ Full CSV</button>
+          <button id="exportPhonesBtn" class="btn btn-outline">⬇ Phones only</button>
+        </div>
+      </div>
+      <div class="list-meta"><span id="recordsCount">0 records</span></div>
+      <div id="recordsList" class="records-list"></div>
+      <div id="recordsEmpty" class="empty hidden">
+        <p>No records yet.</p>
+        <p class="empty-sub">Souls saved on this phone will appear here.</p>
+      </div>
+    </section>
+
+    <!-- ============ SYNC ============ -->
+    <section id="view-sync" class="view" aria-label="Sync">
+      <div class="card">
+        <h2>Sync status</h2>
+        <div class="sync-stats">
+          <div class="stat"><b id="syncTotal">0</b><span>Saved on phone</span></div>
+          <div class="stat"><b id="syncPending">0</b><span>Pending</span></div>
+          <div class="stat"><b id="syncSheet">—</b><span>Central dump</span></div>
+        </div>
+        <button id="syncNowBtn" class="btn btn-primary big">⟳ Sync now</button>
+        <p id="lastSync" class="muted small">Never synced yet.</p>
+      </div>
+
+      <div class="card">
+        <h2>Leader tools</h2>
+        <div id="authSummary" class="muted">Connected to the central dump.</div>
+        <a id="adminLinkSync" class="admin-link" href="#" target="_blank" rel="noopener">📊 Open central dump dashboard →</a>
+      </div>
+
+      <div class="card">
+        <h2>How sync works</h2>
+        <ul class="hint-list">
+          <li>Every entry is <b>saved on this phone first</b> — no internet needed at the field.</li>
+          <li>When the phone is online, entries push automatically to the <b>central dump</b> — no Google Sheet, no copying.</li>
+          <li>Duplicates are prevented — safe to tap <b>Sync now</b> anytime.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============ SETTINGS ============ -->
+    <section id="view-settings" class="view" aria-label="Settings">
+      <div class="card">
+        <h2>Counsellor</h2>
+        <div class="field">
+          <label for="setCounsellor">Your name (attached to every soul you save)</label>
+          <input id="setCounsellor" type="text" placeholder="e.g. Joy Effiom" />
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Google sign-in <small class="muted">(optional)</small></h2>
+        <div id="gsiArea">
+          <p class="muted small">Not needed — the team code already identifies this device. Sign in only if your leader enabled it.</p>
+          <div class="field">
+            <label for="setClientId">Google OAuth Client ID <small>(only if enabled)</small></label>
+            <input id="setClientId" type="text" placeholder="Leave empty unless your leader gives you one" />
+          </div>
+          <div id="gsiButton"></div>
+          <div id="gsiStatus" class="muted small"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Central dump connection</h2>
+        <p class="muted small">✅ Already configured — every entry goes to the team's central register automatically. Only change these if your leader sends new values.</p>
+        <div class="field">
+          <label for="setAppsUrl">Sync backend URL</label>
+          <input id="setAppsUrl" type="url" placeholder="/api" />
+        </div>
+        <div class="field">
+          <label for="setSyncKey">Team code</label>
+          <input id="setSyncKey" type="password" placeholder="Team code" />
+        </div>
+        <div class="toolbar-actions">
+          <button id="saveSettingsBtn" class="btn btn-primary">Save settings</button>
+          <button id="testConnBtn" class="btn btn-outline">Test connection</button>
+        </div>
+        <div id="testConnResult" class="muted small"></div>
+        <a id="adminLink" class="admin-link" href="#" target="_blank" rel="noopener">📊 Open the leader dashboard (central dump) →</a>
+      </div>
+
+      <div class="card">
+        <h2>How this works</h2>
+        <ol class="hint-list">
+          <li>Every entry is saved <b>on this phone first</b> — capture souls even with no network.</li>
+          <li>When internet returns, entries flow into the <b>central dump</b> the leader set up — no Google Sheet, no extra apps.</li>
+          <li>The leader watches totals live and downloads the <b>bulk-SMS CSV</b> anytime.</li>
+        </ol>
+        <p class="muted small">Full details: see <code>SETUP-GUIDE.md</code> shipped with the app files.</p>
+      </div>
+
+      <div class="card">
+        <h2>About</h2>
+        <p class="muted small">Version <span id="appVersion">1.0.0</span> · Device ID <code id="deviceIdShort">…</code></p>
+        <button id="dangerWipe" class="btn btn-danger-outline">Erase ALL records on this phone</button>
+      </div>
+    </section>
+  </main>
+
+  <nav id="tabbar">
+    <button class="tab active" data-tab="capture"><span class="tab-ico">✚</span>Capture</button>
+    <button class="tab" data-tab="records"><span class="tab-ico">📋</span>Records</button>
+    <button class="tab" data-tab="sync"><span class="tab-ico">⟳</span>Sync</button>
+    <button class="tab" data-tab="settings"><span class="tab-ico">⚙</span>Settings</button>
+  </nav>
+
+  <!-- Record detail / edit modal -->
+  <div id="modalRoot" class="modal-root hidden" role="dialog" aria-modal="true">
+    <div class="modal-backdrop" id="modalBackdrop"></div>
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <h2 id="modalTitle">Record</h2>
+      <div id="modalBody"></div>
+      <div class="toolbar-actions modal-actions">
+        <button id="modalEdit" class="btn btn-outline">✎ Edit</button>
+        <button id="modalDelete" class="btn btn-danger-outline">🗑 Delete</button>
+        <button id="modalClose" class="btn btn-primary">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden" aria-live="polite"></div>
+
+  <script src="js/config.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/sync.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

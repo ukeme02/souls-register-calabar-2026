@@ -1,0 +1,18 @@
+# ── Souls Register — Cloudflare Pages config (TEMPLATE) ─────────────────────
+# Copy this file to `wrangler.toml` for LOCAL testing only:
+#     cp wrangler.example.toml wrangler.toml
+# For the real deployment you do NOT need wrangler.toml — see SETUP-GUIDE.md:
+# you connect the repo to Cloudflare Pages in the dashboard and bind D1 there.
+
+name = "souls-register"
+compatibility_date = "2024-09-01"
+pages_build_output_dir = "."
+
+[vars]
+TEAM_CODE = "calabar2026"   # shared volunteer passcode (must match js/config.js)
+ADMIN_KEY = "leader2026"    # leader dashboard + CSV download key (change it!)
+
+[[d1_databases]]
+binding = "DB"
+database_name = "souls-db"
+database_id = "REPLACE_WITH_REAL_ID_FROM_DASHBOARD"

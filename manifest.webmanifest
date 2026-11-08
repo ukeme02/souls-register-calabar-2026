@@ -1,0 +1,20 @@
+{
+  "name": "Souls Register — CfaN Calabar 2026",
+  "short_name": "Souls Register",
+  "description": "Capture details of saved souls at the CfaN Great Gospel Crusade, Calabar 2026. Works offline, syncs to Google Sheets, exports CSV for bulk SMS.",
+  "id": "souls-register-calabar-2026",
+  "start_url": "./index.html?source=pwa",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d1b3e",
+  "theme_color": "#0d1b3e",
+  "lang": "en",
+  "categories": ["productivity", "utilities"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
