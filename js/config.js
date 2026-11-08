@@ -10,11 +10,11 @@
  * TEAM_CODE : shared passcode all volunteer apps use to reach the central dump.
  *             MUST match the TEAM_CODE variable set on Cloudflare Pages.
  *             (Default on both sides: 'calabar2026' — change both to go secure.)
- * ADMIN_URL : leader dashboard (same site + '/api/admin').
+ * ADMIN_URL : leader dashboard (same site + '/admin' — password login page).
  * ==========================================================================*/
 window.APP_CONFIG = {
   SYNC_URL: '/api',
   TEAM_CODE: 'calabar2026',
-  ADMIN_URL: '/api/admin',
+  ADMIN_URL: '/admin',
   CRUSADE_NAME: 'CfaN Great Gospel Crusade — Calabar 2026',
 };

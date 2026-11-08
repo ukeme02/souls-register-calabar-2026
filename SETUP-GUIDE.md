@@ -53,7 +53,7 @@ Then edit `js/config.js` to match, commit, and push — Pages redeploys automati
 ### 2.4 Verify
 - Open `https://YOUR-SITE.pages.dev` → landing page → Start capturing →
   save a test soul (Settings → set your counsellor name first).
-- Open `https://YOUR-SITE.pages.dev/api/admin` → enter your ADMIN_KEY →
+- Open `https://YOUR-SITE.pages.dev/admin` → enter your admin password (the ADMIN_KEY value) →
   the test soul should appear within seconds. **Working — delete the test row
   from the dashboard isn't needed (rows are deduped by ID), or wipe via D1 console.**
 
@@ -71,7 +71,7 @@ inside the app. Entries sync by themselves whenever the phone has signal.
 
 ## Part 4 — During the crusade
 
-- You (leader) keep `…/api/admin` open — the **total souls** count climbs live.
+- You (leader) keep `…/admin` open — the **total souls** count climbs live.
 - Duplicate-phone warnings keep the list clean at the source.
 - **Bulk-SMS CSV:** dashboard → `⬇ Full CSV` (all details) or `⬇ Phones only`
   (deduplicated). Columns: `phone_number` first, then names, gender, decision,
@@ -104,9 +104,9 @@ guide or the code header comments for the detailed steps.
 | Thing | Where |
 |---|---|
 | Volunteer app | `https://YOUR-SITE.pages.dev` |
-| Leader dashboard | `https://YOUR-SITE.pages.dev/api/admin` |
-| Full CSV | dashboard → ⬇ Full CSV (or `/api/export.csv?key=ADMIN_KEY`) |
-| Phones-only CSV | dashboard → ⬇ Phones only (or `/api/phones.csv?key=ADMIN_KEY`) |
+| Leader dashboard | `https://YOUR-SITE.pages.dev/admin` |
+| Full CSV | dashboard → ⬇ Full CSV (or `/admin → ⬇ Full CSV`) |
+| Phones-only CSV | dashboard → ⬇ Phones only (or `/admin → ⬇ Phones only`) |
 | Team code | `js/config.js` (must equal the `TEAM_CODE` Pages variable) |
 
 ### The font

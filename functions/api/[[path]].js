@@ -19,8 +19,7 @@
  * no OAuth client setup needed for that check).
  * ==========================================================================*/
 
-const TEAM_CODE_DEFAULT = 'calabar2026'; // override with env var TEAM_CODE
-const ADMIN_KEY_DEFAULT = 'leader2026';  // override with env var ADMIN_KEY
+import { teamCodeOf, adminKeyOf, adminCookieIdentity, buildAdminHtml } from '../_admin.js';
 
 const JSON_HEADERS = {
   'Content-Type': 'application/json',
@@ -53,7 +52,9 @@ async function verifyGoogleToken(token) {
 }
 
 async function checkAuth(request, env, body) {
-  const teamCode = env.TEAM_CODE || TEAM_CODE_DEFAULT;
+  const admin = adminCookieIdentity(request, env);
+  if (admin) return admin;
+  const teamCode = teamCodeOf(env);
   const auth = (body && body.auth) || {};
   if (auth.key && auth.key === teamCode) return 'team';
   if (auth.token) {
@@ -177,131 +178,20 @@ async function csvResponse(env, phonesOnly, keyOk) {
   });
 }
 
-function esc(s) {
-  return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-  }[c]));
-}
-
-async function adminPage(request, env, keyOk, adminKey) {
-  if (!keyOk) {
-    return new Response(
-      `<!DOCTYPE html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-       <title>Souls Register — Leader</title>
-       <link rel="stylesheet" href="/css/fonts.css">
-       <body style="font-family:var(--font-app,'Nunito Sans Expanded',-apple-system,sans-serif);background:#0d1b3e;color:#fff;display:grid;place-items:center;height:100vh;margin:0">
-       <form method="GET" style="text-align:center">
-         <div style="font-size:40px">✝</div>
-         <h2>Souls Register — Leader Access</h2>
-         <p style="color:#9fb0d8">Enter the admin key</p>
-         <input name="key" type="password" autofocus style="font-size:18px;padding:12px;border-radius:10px;border:none" />
-         <button style="font-size:18px;padding:12px 20px;border-radius:10px;border:none;background:#f2b705;color:#0d1b3e;font-weight:800">Enter</button>
-       </form></body>`, { headers: { 'Content-Type': 'text/html;charset=utf-8' } }
-    );
-  }
-  const q = new URL(request.url).searchParams.get('q') || '';
-  const like = `%${q.replace(/[%_]/g, '')}%`;
-  const { results } = q
-    ? await env.DB.prepare(
-        'SELECT * FROM souls WHERE training = 0 AND (first_name LIKE ? OR middle_name LIKE ? OR surname LIKE ? OR phone LIKE ? OR counsellor LIKE ?) ORDER BY server_time DESC LIMIT 500'
-      ).bind(like, like, like, like, like).all()
-    : await env.DB.prepare('SELECT * FROM souls WHERE training = 0 ORDER BY server_time DESC LIMIT 500').all();
-  const totals = await env.DB.prepare(
-    "SELECT COUNT(*) AS total, COUNT(DISTINCT phone) AS phones, COUNT(DISTINCT CASE WHEN counsellor <> '' THEN counsellor END) AS workers FROM souls WHERE training = 0"
-  ).first();
-  const trainRow = await env.DB.prepare('SELECT COUNT(*) AS c FROM souls WHERE training = 1').first();
-  const trainingCount = trainRow ? trainRow.c : 0;
-  const byGender = await env.DB.prepare(
-    "SELECT gender, COUNT(*) AS c FROM souls WHERE training = 0 GROUP BY gender"
-  ).all();
-  const locked = crusadeStarted();
-
-  const rows = (results || []).map((r) => `<tr>
-      <td>${esc(r.phone)}</td><td><b>${esc(r.first_name)}</b> ${esc(r.middle_name)} ${esc(r.surname)}</td>
-      <td>${esc(r.gender)}</td><td>${esc(r.age_group)}</td><td>${esc(r.decision)}</td>
-      <td>${esc(r.counsellor)}</td><td>${esc((r.server_time || '').slice(0, 16).replace('T', ' '))}</td>
-    </tr>`).join('');
-  const genderChips = (byGender.results || []).map((g) =>
-    `<span style="background:#16306e;color:#fff;border-radius:999px;padding:6px 14px;font-weight:700">${esc(g.gender || '—')}: ${g.c}</span>`).join(' ');
-
-  return new Response(`<!DOCTYPE html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Souls Register — Central Dump (Leader)</title>
-<link rel="stylesheet" href="/css/fonts.css">
-<style>
-  /* App font: Nunito Sans Expanded — self-hosted /css/fonts.css, locked 2026-11-08. */
-  :root { --font-app: "Nunito Sans Expanded", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
-  * { box-sizing: border-box; }
-  body { font-family: var(--font-app); margin: 0; background: #f2f5fb; color: #18213a; }
-  header { background: linear-gradient(135deg,#0d1b3e,#16306e); color: #fff; padding: 18px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-  header h1 { font-size: 20px; margin: 0; margin-right: auto; }
-  header .gold { color: #f2b705; }
-  .btn { display: inline-block; padding: 10px 16px; border-radius: 10px; font-weight: 800; text-decoration: none; font-size: 14px; border: none; cursor: pointer; }
-  .btn-gold { background: #f2b705; color: #0d1b3e; }
-  .btn-ghost { background: rgba(255,255,255,.1); color: #fff; border: 1px solid rgba(255,255,255,.25); }
-  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; padding: 14px 18px; }
-  .stat { background: #fff; border-radius: 14px; padding: 14px; text-align: center; box-shadow: 0 2px 8px rgba(13,27,62,.08); }
-  .stat b { font-size: 30px; display: block; color: #0d1b3e; }
-  .stat span { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: #66708c; font-weight: 700; }
-  .bar { padding: 0 18px 8px; display: flex; gap: 8px; flex-wrap: wrap; }
-  form.bar { margin: 0; }
-  input[type=search] { flex: 1; min-width: 200px; padding: 11px 13px; border: 1.5px solid #e3e8f2; border-radius: 10px; font-size: 15px; font-family: var(--font-app); }
-  .wrap { padding: 0 18px 30px; overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 8px rgba(13,27,62,.08); min-width: 720px; }
-  th { background: #0d1b3e; color: #fff; text-align: left; padding: 10px 12px; font-size: 12px; text-transform: uppercase; letter-spacing: .4px; }
-  td { padding: 10px 12px; border-bottom: 1px solid #eef1f8; font-size: 14px; }
-  tr:last-child td { border-bottom: none; }
-  .empty { text-align: center; color: #66708c; padding: 40px; font-weight: 600; }
-</style></head>
-<body>
-<header>
-  <h1>✝ Souls Register — <span class="gold">Central Dump</span></h1>
-  <a class="btn btn-gold" href="/api/export.csv?key=${encodeURIComponent(adminKey)}">⬇ Full CSV (bulk SMS)</a>
-  <a class="btn btn-ghost" href="/api/phones.csv?key=${encodeURIComponent(adminKey)}">⬇ Phones only</a>
-  <a class="btn btn-ghost" href="/">← Back to app</a>
-</header>
-<div class="stats">
-  <div class="stat"><b>${totals ? totals.total : 0}</b><span>Real souls registered</span></div>
-  <div class="stat"><b>${totals ? totals.phones : 0}</b><span>Unique phone numbers</span></div>
-  <div class="stat"><b>${totals ? totals.workers : 0}</b><span>Counsellors active</span></div>
-</div>
-<div class="bar">${genderChips}
-  <span style="background:#fdf3dd;color:#b97a08;border-radius:999px;padding:6px 14px;font-weight:700">🎓 Training rows: ${trainingCount}${locked ? '' : trainingCount ? ' — wipe before the event!' : ''}</span>
-  ${!locked && trainingCount ? `<button id="wipeTrain" class="btn" style="background:#fdecec;color:#d13f3f;border:1.5px solid #f2caca">🧹 Wipe ALL training data</button>` : ''}
-  <form method="GET" class="bar" style="flex:1">
-    <input type="hidden" name="key" value="${esc(adminKey)}" />
-    <input type="search" name="q" value="${esc(q)}" placeholder="Search name, phone, counsellor…" />
-  </form>
-</div>
-<div class="wrap">
-  ${rows ? `<table><thead><tr><th>Phone</th><th>Name</th><th>Gender</th><th>Age</th><th>Decision</th><th>Counsellor</th><th>Synced</th></tr></thead><tbody>${rows}</tbody></table>`
-         : '<div class="empty">No souls in the central dump yet — they appear here the moment any phone syncs.</div>'}
-</div>
-<script>
-  const wt = document.getElementById('wipeTrain');
-  if (wt) wt.addEventListener('click', async () => {
-    if (wt.dataset.armed !== '1') { wt.dataset.armed = '1'; wt.textContent = '⚠ Tap again to wipe ALL training rows'; return; }
-    wt.disabled = true; wt.textContent = 'Wiping…';
-    const res = await fetch('/api', { method: 'POST', body: JSON.stringify({ action: 'wipe_training', auth: { key: ${JSON.stringify(adminKey)} } }) });
-    const data = await res.json();
-    if (data.ok) location.reload();
-    else { wt.disabled = false; wt.textContent = data.error || 'Failed'; wt.dataset.armed = ''; }
-  });
-</script>
-</body></html>`, { headers: { 'Content-Type': 'text/html;charset=utf-8' } });
-}
-
 export async function onRequestGet(context) {
   const { request, env } = context;
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/+$/, '');
-  const adminKey = env.ADMIN_KEY || ADMIN_KEY_DEFAULT;
-  const teamCode = env.TEAM_CODE || TEAM_CODE_DEFAULT;
   const keyParam = url.searchParams.get('key') || '';
 
-  if (path.endsWith('/admin')) return adminPage(request, env, keyParam === adminKey, keyParam);
-  if (path.endsWith('/export.csv')) return csvResponse(env, false, keyParam === adminKey || keyParam === teamCode);
-  if (path.endsWith('/phones.csv')) return csvResponse(env, true, keyParam === adminKey || keyParam === teamCode);
+  if (path.endsWith('/admin')) {
+    // legacy /api/admin?key=… bookmark OR cookie login — both welcome
+    const keyOk = (keyParam && keyParam === adminKeyOf(env)) || !!adminCookieIdentity(request, env);
+    if (!keyOk) return new Response('Unauthorized', { status: 401 });
+    return new Response(await buildAdminHtml(request, env), { headers: { 'Content-Type': 'text/html;charset=utf-8' } });
+  }
+  if (path.endsWith('/export.csv')) return csvResponse(env, false, keyParam === adminKeyOf(env) || keyParam === teamCodeOf(env) || !!adminCookieIdentity(request, env));
+  if (path.endsWith('/phones.csv')) return csvResponse(env, true, keyParam === adminKeyOf(env) || keyParam === teamCodeOf(env) || !!adminCookieIdentity(request, env));
   if (path === '/api' || path === '/api/') return handleApi(request, env);
   return json({ ok: false, error: 'Not found' }, 404);
 }

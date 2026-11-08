@@ -51,6 +51,6 @@ Full details: **[SETUP-GUIDE.md](SETUP-GUIDE.md)**.
 
 ## Leader dashboard
 
-`https://YOUR-SITE.pages.dev/api/admin` — enter your admin key and watch souls
+`https://YOUR-SITE.pages.dev/admin` — enter your admin password and watch souls
 land live. CSV buttons are at the top. The CSV opens cleanly in Excel and is
 accepted by Termii, BulkSMSNigeria, SMSMobile24 and similar bulk-SMS portals.
