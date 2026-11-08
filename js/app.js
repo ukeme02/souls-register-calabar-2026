@@ -408,29 +408,41 @@
     return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`;
   }
 
-  $('exportCsvBtn').addEventListener('click', async () => {
+  function reportSlug(s) {
+    const base = (s.counsellor || s.deviceId || 'phone').toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    return base || 'phone';
+  }
+
+  async function exportFullCsv() {
     const all = await DB.all();
-    if (!all.length) { toast('No records to export yet', 'err'); return; }
+    if (!all.length) { toast('No records to export yet — save a soul first', 'err'); return; }
     all.sort((a, b) => (a.created_at < b.created_at ? -1 : 1));
-    const header = ['phone_number', 'first_name', 'middle_name', 'surname', 'gender', 'age_group', 'decision', 'address', 'prayer_request', 'counsellor', 'saved_at'];
+    const s = Settings.load();
+    const header = ['phone_number', 'first_name', 'middle_name', 'surname', 'gender', 'age_group', 'decision', 'address', 'prayer_request', 'counsellor', 'saved_at', 'sync_status'];
     const rows = all.map((r) => [
       digitsOnly(r.phone), r.first, r.middle, r.surname, r.gender, r.age, r.decision,
-      r.address, r.prayer, r.counsellor, r.created_at,
+      r.address, r.prayer, r.counsellor, r.created_at, r.synced ? 'synced' : 'pending',
     ].map(csvCell).join(','));
-    downloadFile(`souls-calabar-2026-full-${stamp()}.csv`, [header.join(','), ...rows].join('\r\n'));
-    toast(`Exported ${all.length} records`, 'ok');
-  });
+    downloadFile(`my-report-${reportSlug(s)}-${stamp()}.csv`, [header.join(','), ...rows].join('\r\n'));
+    toast(`Report downloaded — ${all.length} record${all.length === 1 ? '' : 's'} from this phone`, 'ok');
+  }
 
-  $('exportPhonesBtn').addEventListener('click', async () => {
+  async function exportPhonesCsv() {
     const all = await DB.all();
-    if (!all.length) { toast('No records to export yet', 'err'); return; }
+    if (!all.length) { toast('No records to export yet — save a soul first', 'err'); return; }
+    const s = Settings.load();
     const seen = new Set();
     const phones = all
       .map((r) => digitsOnly(r.phone))
       .filter((p) => p.length >= 10 && !seen.has(p) && seen.add(p));
-    downloadFile(`souls-calabar-2026-phones-${stamp()}.csv`, ['phone_number', ...phones].join('\r\n'));
+    downloadFile(`my-report-${reportSlug(s)}-phones-${stamp()}.csv`, ['phone_number', ...phones].join('\r\n'));
     toast(`Exported ${phones.length} phone numbers`, 'ok');
-  });
+  }
+
+  $('exportCsvBtn').addEventListener('click', exportFullCsv);
+  $('exportPhonesBtn').addEventListener('click', exportPhonesCsv);
+  $('exportCsvSync').addEventListener('click', exportFullCsv);
 
   // ---------- sync view ----------
   async function refreshStats() {

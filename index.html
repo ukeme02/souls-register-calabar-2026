@@ -190,12 +190,16 @@
 
     <!-- ============ RECORDS ============ -->
     <section id="view-records" class="view" aria-label="Records">
+      <div class="card">
+        <h2>📤 My report — this phone</h2>
+        <p class="muted small" style="margin:0 0 4px">Download everything captured on <b>this phone</b> as a CSV — works even with no network, anytime you need to send a report to your leader or the ICT team.</p>
+        <div class="toolbar-actions">
+          <button id="exportCsvBtn" class="btn btn-primary">⬇ My CSV report</button>
+          <button id="exportPhonesBtn" class="btn btn-outline">⬇ My phone numbers</button>
+        </div>
+      </div>
       <div class="toolbar">
         <input id="searchInput" type="search" placeholder="🔍 Search name or phone…" />
-        <div class="toolbar-actions">
-          <button id="exportCsvBtn" class="btn btn-outline">⬇ Full CSV</button>
-          <button id="exportPhonesBtn" class="btn btn-outline">⬇ Phones only</button>
-        </div>
       </div>
       <div class="list-meta"><span id="recordsCount">0 records</span></div>
       <div id="recordsList" class="records-list"></div>
@@ -217,6 +221,7 @@
         </div>
         <div class="progress" id="syncProgress"><i></i></div>
         <button id="syncNowBtn" class="btn btn-primary big">⟳ Sync now</button>
+        <button id="exportCsvSync" class="btn btn-outline big" style="margin-top:8px">⬇ Download my report (CSV)</button>
         <p id="lastSync" class="muted small">Never synced yet.</p>
       </div>
 
