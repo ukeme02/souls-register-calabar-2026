@@ -66,7 +66,13 @@ async function checkAuth(request, env, body) {
   return null;
 }
 
-const COLUMNS = '(id, first_name, middle_name, surname, phone, gender, age_group, decision, address, prayer_request, counsellor, device_id, created_at, updated_at, synced_by, server_time)';
+const COLUMNS = '(id, first_name, middle_name, surname, phone, gender, age_group, decision, address, prayer_request, counsellor, device_id, created_at, updated_at, synced_by, server_time, training)';
+
+// Deletion lock: from the moment the crusade begins (Nov 12, 2026, 4:00 PM WAT)
+// no record may ever be deleted — not even with the admin key.
+const CRUSADE_START_UTC = Date.UTC(2026, 10, 12, 15, 0, 0);
+function crusadeStarted() { return Date.now() >= CRUSADE_START_UTC; }
+const LOCK_MSG = '🔒 Data is locked — deletion is permanently disabled now the crusade has started.';
 
 function recordRow(r, syncedBy) {
   const now = new Date().toISOString();
@@ -75,6 +81,7 @@ function recordRow(r, syncedBy) {
     r.gender || '', r.age_group || '', r.decision || '', r.address || '',
     r.prayer_request || '', r.counsellor || '', r.device_id || '',
     r.created_at || '', r.updated_at || '', syncedBy || r.synced_by || '', now,
+    r.training ? 1 : 0,
   ];
 }
 
@@ -88,12 +95,12 @@ async function handleApi(request, env) {
   if (!identity) return json({ ok: false, error: 'Not authorized — wrong team code.' }, 401);
 
   if (action === 'ping') {
-    const row = await env.DB.prepare('SELECT COUNT(*) AS c FROM souls').first();
-    return json({ ok: true, message: 'Souls Register central dump is live ✝', count: row ? row.c : 0 });
+    const row = await env.DB.prepare('SELECT COUNT(*) AS c FROM souls WHERE training = 0').first();
+    return json({ ok: true, message: 'Souls Register central dump is live ✝', count: row ? row.c : 0, locked: crusadeStarted() });
   }
   if (action === 'count') {
-    const row = await env.DB.prepare('SELECT COUNT(*) AS c FROM souls').first();
-    return json({ ok: true, count: row ? row.c : 0 });
+    const row = await env.DB.prepare('SELECT COUNT(*) AS c FROM souls WHERE training = 0').first();
+    return json({ ok: true, count: row ? row.c : 0, locked: crusadeStarted() });
   }
   if (action === 'push') {
     const records = (body && body.records) || [];
@@ -118,18 +125,28 @@ async function handleApi(request, env) {
     for (let i = 0; i < stmts.length; i += 100) {
       await env.DB.batch(stmts.slice(i, i + 100));
     }
-    const row = await env.DB.prepare('SELECT COUNT(*) AS c FROM souls').first();
+    const row = await env.DB.prepare('SELECT COUNT(*) AS c FROM souls WHERE training = 0').first();
     return json({ ok: true, added, updated, count: row ? row.c : 0 });
   }
   if (action === 'delete') {
+    // Hard lock at crusade start: nothing is ever deleted again.
+    if (crusadeStarted()) return json({ ok: false, error: LOCK_MSG }, 403);
     const ids = (body && body.ids) || [];
+    const onlyTraining = body && body.trainingOnly;
     let deleted = 0;
     for (const id of ids) {
-      const res = await env.DB.prepare('DELETE FROM souls WHERE id = ?').bind(id).run();
+      const res = await env.DB.prepare('DELETE FROM souls WHERE id = ?' + (onlyTraining ? ' AND training = 1' : '')).bind(id).run();
       deleted += res.meta ? res.meta.changes : 0;
     }
-    const row = await env.DB.prepare('SELECT COUNT(*) AS c FROM souls').first();
+    const row = await env.DB.prepare('SELECT COUNT(*) AS c FROM souls WHERE training = 0').first();
     return json({ ok: true, deleted, count: row ? row.c : 0 });
+  }
+  if (action === 'wipe_training') {
+    // Erases every practice record. Also locked after crusade start.
+    if (crusadeStarted()) return json({ ok: false, error: LOCK_MSG }, 403);
+    const res = await env.DB.prepare('DELETE FROM souls WHERE training = 1').run();
+    const row = await env.DB.prepare('SELECT COUNT(*) AS c FROM souls WHERE training = 0').first();
+    return json({ ok: true, deleted: res.meta ? res.meta.changes : 0, count: row ? row.c : 0 });
   }
   return json({ ok: false, error: 'Unknown action: ' + action }, 400);
 }
@@ -137,8 +154,8 @@ async function handleApi(request, env) {
 async function csvResponse(env, phonesOnly, keyOk) {
   if (!keyOk) return new Response('Unauthorized', { status: 401 });
   const qr = phonesOnly
-    ? 'SELECT DISTINCT phone FROM souls WHERE length(phone) >= 10 ORDER BY phone'
-    : 'SELECT * FROM souls ORDER BY server_time ASC';
+    ? "SELECT DISTINCT phone FROM souls WHERE training = 0 AND length(phone) >= 10 ORDER BY phone"
+    : 'SELECT * FROM souls WHERE training = 0 ORDER BY server_time ASC';
   const { results } = await env.DB.prepare(qr).all();
   let text;
   if (phonesOnly) {
@@ -186,15 +203,18 @@ async function adminPage(request, env, keyOk, adminKey) {
   const like = `%${q.replace(/[%_]/g, '')}%`;
   const { results } = q
     ? await env.DB.prepare(
-        'SELECT * FROM souls WHERE first_name LIKE ? OR middle_name LIKE ? OR surname LIKE ? OR phone LIKE ? OR counsellor LIKE ? ORDER BY server_time DESC LIMIT 500'
+        'SELECT * FROM souls WHERE training = 0 AND (first_name LIKE ? OR middle_name LIKE ? OR surname LIKE ? OR phone LIKE ? OR counsellor LIKE ?) ORDER BY server_time DESC LIMIT 500'
       ).bind(like, like, like, like, like).all()
-    : await env.DB.prepare('SELECT * FROM souls ORDER BY server_time DESC LIMIT 500').all();
+    : await env.DB.prepare('SELECT * FROM souls WHERE training = 0 ORDER BY server_time DESC LIMIT 500').all();
   const totals = await env.DB.prepare(
-    'SELECT COUNT(*) AS total, COUNT(DISTINCT phone) AS phones, COUNT(DISTINCT counsellor) AS workers FROM souls'
+    'SELECT COUNT(*) AS total, COUNT(DISTINCT phone) AS phones, COUNT(DISTINCT counsellor) AS workers FROM souls WHERE training = 0'
   ).first();
+  const trainRow = await env.DB.prepare('SELECT COUNT(*) AS c FROM souls WHERE training = 1').first();
+  const trainingCount = trainRow ? trainRow.c : 0;
   const byGender = await env.DB.prepare(
-    "SELECT gender, COUNT(*) AS c FROM souls GROUP BY gender"
+    "SELECT gender, COUNT(*) AS c FROM souls WHERE training = 0 GROUP BY gender"
   ).all();
+  const locked = crusadeStarted();
 
   const rows = (results || []).map((r) => `<tr>
       <td>${esc(r.phone)}</td><td><b>${esc(r.first_name)}</b> ${esc(r.middle_name)} ${esc(r.surname)}</td>
@@ -238,13 +258,16 @@ async function adminPage(request, env, keyOk, adminKey) {
   <h1>✝ Souls Register — <span class="gold">Central Dump</span></h1>
   <a class="btn btn-gold" href="/api/export.csv?key=${encodeURIComponent(adminKey)}">⬇ Full CSV (bulk SMS)</a>
   <a class="btn btn-ghost" href="/api/phones.csv?key=${encodeURIComponent(adminKey)}">⬇ Phones only</a>
+  <a class="btn btn-ghost" href="/">← Back to app</a>
 </header>
 <div class="stats">
-  <div class="stat"><b>${totals ? totals.total : 0}</b><span>Souls registered</span></div>
+  <div class="stat"><b>${totals ? totals.total : 0}</b><span>Real souls registered</span></div>
   <div class="stat"><b>${totals ? totals.phones : 0}</b><span>Unique phone numbers</span></div>
   <div class="stat"><b>${totals ? totals.workers : 0}</b><span>Counsellors active</span></div>
 </div>
 <div class="bar">${genderChips}
+  <span style="background:#fdf3dd;color:#b97a08;border-radius:999px;padding:6px 14px;font-weight:700">🎓 Training rows: ${trainingCount}${locked ? '' : trainingCount ? ' — wipe before the event!' : ''}</span>
+  ${!locked && trainingCount ? `<button id="wipeTrain" class="btn" style="background:#fdecec;color:#d13f3f;border:1.5px solid #f2caca">🧹 Wipe ALL training data</button>` : ''}
   <form method="GET" class="bar" style="flex:1">
     <input type="hidden" name="key" value="${esc(adminKey)}" />
     <input type="search" name="q" value="${esc(q)}" placeholder="Search name, phone, counsellor…" />
@@ -254,6 +277,17 @@ async function adminPage(request, env, keyOk, adminKey) {
   ${rows ? `<table><thead><tr><th>Phone</th><th>Name</th><th>Gender</th><th>Age</th><th>Decision</th><th>Counsellor</th><th>Synced</th></tr></thead><tbody>${rows}</tbody></table>`
          : '<div class="empty">No souls in the central dump yet — they appear here the moment any phone syncs.</div>'}
 </div>
+<script>
+  const wt = document.getElementById('wipeTrain');
+  if (wt) wt.addEventListener('click', async () => {
+    if (wt.dataset.armed !== '1') { wt.dataset.armed = '1'; wt.textContent = '⚠ Tap again to wipe ALL training rows'; return; }
+    wt.disabled = true; wt.textContent = 'Wiping…';
+    const res = await fetch('/api', { method: 'POST', body: JSON.stringify({ action: 'wipe_training', auth: { key: ${JSON.stringify(adminKey)} } }) });
+    const data = await res.json();
+    if (data.ok) location.reload();
+    else { wt.disabled = false; wt.textContent = data.error || 'Failed'; wt.dataset.armed = ''; }
+  });
+</script>
 </body></html>`, { headers: { 'Content-Type': 'text/html;charset=utf-8' } });
 }
 

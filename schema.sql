@@ -17,8 +17,10 @@ CREATE TABLE IF NOT EXISTS souls (
   created_at     TEXT DEFAULT '',
   updated_at     TEXT DEFAULT '',
   synced_by      TEXT DEFAULT '',
-  server_time    TEXT DEFAULT ''
+  server_time    TEXT DEFAULT '',
+  training       INTEGER DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_souls_phone ON souls(phone);
 CREATE INDEX IF NOT EXISTS idx_souls_counsellor ON souls(counsellor);
 CREATE INDEX IF NOT EXISTS idx_souls_server_time ON souls(server_time);
+CREATE INDEX IF NOT EXISTS idx_souls_training ON souls(training);

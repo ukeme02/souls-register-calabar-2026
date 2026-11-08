@@ -104,6 +104,7 @@
 
     <!-- ============ CAPTURE ============ -->
     <section id="view-capture" class="view active" aria-label="Capture">
+      <div id="trainingBanner" class="banner hidden"></div>
       <div id="installBanner" class="banner banner-install hidden"></div>
       <div id="syncBanner" class="banner hidden"></div>
 
@@ -282,6 +283,16 @@
           <li>The leader watches totals live and downloads the <b>bulk-SMS CSV</b> anytime.</li>
         </ol>
         <p class="muted small">Full details: see <code>SETUP-GUIDE.md</code> shipped with the app files.</p>
+      </div>
+
+      <div class="card">
+        <h2>🎓 Training mode &amp; data lock</h2>
+        <div id="trainingStatus" class="muted small">Practice mode for training volunteers. While ON, everything captured is marked as <b>practice data</b> and can be wiped in one tap — without touching any real record.</div>
+        <div class="toolbar-actions">
+          <button id="trainingToggleBtn" class="btn btn-outline">Turn training mode ON</button>
+          <button id="trainingWipeBtn" class="btn btn-danger-outline">🧹 Erase ALL training data</button>
+        </div>
+        <p class="muted small" style="margin-bottom:0">🔒 After the crusade starts (<b>Nov 12, 4:00 PM</b>), deleting is permanently disabled — on phones and in the central dump. Real data can never be erased.</p>
       </div>
 
       <div class="card">

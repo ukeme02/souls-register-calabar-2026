@@ -15,6 +15,8 @@ window.Settings = (function () {
     welcomed: false,
     lastSyncAt: 0,
     pendingDeletes: [],
+    pendingTrainingDeletes: [],
+    trainingMode: false,
   };
   let cache = null;
 
@@ -198,6 +200,7 @@ window.Sync = (function () {
       device_id: r.device_id || '',
       created_at: r.created_at || '',
       updated_at: r.updated_at || '',
+      training: r.training ? 1 : 0,
     };
   }
 
@@ -220,10 +223,17 @@ window.Sync = (function () {
 
   async function pushDeletes() {
     const s = Settings.load();
-    if (!s.pendingDeletes.length) return;
-    const ids = s.pendingDeletes.slice(0, 200);
-    await callApi({ action: 'delete', auth: authPayload(), ids });
-    Settings.save({ pendingDeletes: s.pendingDeletes.filter((x) => !ids.includes(x)) });
+    // training rows first (server only deletes rows flagged training = 1)
+    if (s.pendingTrainingDeletes.length) {
+      const ids = s.pendingTrainingDeletes.slice(0, 200);
+      await callApi({ action: 'delete', auth: authPayload(), ids, trainingOnly: true });
+      Settings.save({ pendingTrainingDeletes: s.pendingTrainingDeletes.filter((x) => !ids.includes(x)) });
+    }
+    if (s.pendingDeletes.length) {
+      const ids = s.pendingDeletes.slice(0, 200);
+      await callApi({ action: 'delete', auth: authPayload(), ids });
+      Settings.save({ pendingDeletes: s.pendingDeletes.filter((x) => !ids.includes(x)) });
+    }
   }
 
   async function syncNow(opts) {
@@ -274,6 +284,11 @@ window.Sync = (function () {
     return data.count;
   }
 
+  async function wipeTrainingData() {
+    const data = await callApi({ action: 'wipe_training', auth: authPayload() });
+    return data;
+  }
+
   async function testConnection() {
     const data = await callApi({ action: 'ping', auth: authPayload() });
     return data;
@@ -297,5 +312,5 @@ window.Sync = (function () {
     if (st.online && st.configured && st.authed) syncNow();
   }, 90 * 1000);
 
-  return { state, syncNow, fetchServerCount, testConnection };
+  return { state, syncNow, fetchServerCount, wipeTrainingData, testConnection };
 })();

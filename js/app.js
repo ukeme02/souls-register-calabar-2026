@@ -35,6 +35,7 @@
     const d = digitsOnly(s);
     return d.length > 10 ? d.slice(-10) : d;
   }
+  function crusadeStarted() { return Date.now() >= CRUSADE_START_UTC; }
 
   // ---------- tabs / views ----------
   function showView(name) {
@@ -206,6 +207,7 @@
       device_id: s.deviceId,
       created_at: nowIso,
       updated_at: nowIso,
+      training: s.trainingMode ? 1 : 0,
       synced: 0, // 0 = pending, 1 = synced (numbers, since booleans aren't valid IDB keys)
       synced_at: '',
     };
@@ -214,7 +216,8 @@
     // feedback + reset
     const total = await DB.count();
     const flash = $('saveFlash');
-    flash.textContent = `✓ Saved! ${rec.first} is in the register — ${total} soul${total === 1 ? '' : 's'} on this phone.`;
+    flash.textContent = (s.trainingMode ? '🎓 [TRAINING] ' : '') +
+      `✓ Saved! ${rec.first} is in the register — ${total} soul${total === 1 ? '' : 's'} on this phone.`;
     flash.classList.remove('hidden');
     setTimeout(() => flash.classList.add('hidden'), 3500);
 
@@ -294,6 +297,9 @@
     delBtn.textContent = '🗑 Delete';
     delBtn.style.display = '';
     editBtn.style.display = '';
+    // Data lock: once the crusade starts, real records can never be deleted.
+    const canDelete = r.training === 1 || !crusadeStarted();
+    delBtn.style.display = canDelete ? '' : 'none';
 
     if (!modalState.editing) {
       $('modalBody').innerHTML = [
@@ -301,7 +307,9 @@
         ['Decision', r.decision], ['Address', r.address], ['Prayer', r.prayer],
         ['Counsellor', r.counsellor], ['Saved', fmtDateTime(r.created_at)],
         ['Sync', r.synced ? '✓ synced to central dump' : '⏳ pending'],
-      ].map(([k, v]) => `<div class="kv"><b>${k}</b><div>${esc(v || '—')}</div></div>`).join('');
+        r.training ? ['Type', '🎓 Training (practice data)'] : null,
+      ].filter(Boolean).map(([k, v]) => `<div class="kv"><b>${k}</b><div>${esc(v || '—')}</div></div>`).join('') +
+        (!canDelete ? '<p class="muted small" style="margin:10px 0 0">🔒 Deletion is locked — the crusade has started.</p>' : '');
       editBtn.textContent = '✎ Edit';
     } else {
       $('modalBody').innerHTML = FIELDS.map(([key, label, type]) => {
@@ -354,9 +362,16 @@
       return;
     }
     const r = await DB.get(modalState.id);
-    if (r && r.synced) {
+    if (!r) return;
+    if (r.training === 1) {
+      const s = Settings.load();
+      Settings.save({ pendingTrainingDeletes: s.pendingTrainingDeletes.concat([r.id]) });
+    } else if (!crusadeStarted()) {
       const s = Settings.load();
       Settings.save({ pendingDeletes: s.pendingDeletes.concat([r.id]) });
+    } else {
+      toast('🔒 Locked — deletion is disabled after crusade start', 'err');
+      return;
     }
     await DB.remove(modalState.id);
     closeModal();
@@ -434,7 +449,8 @@
     const s = Settings.load();
     const authEl = $('authSummary');
     const cfg = window.APP_CONFIG || {};
-    $('adminLinkSync').href = cfg.ADMIN_URL || '#';
+    $('adminLinkSync').href = location.origin + (cfg.ADMIN_URL || '/api/admin');
+    $('adminLinkSync').removeAttribute('target');
     if (Auth.googleValid()) {
       authEl.innerHTML = `✅ Syncing as <b>${esc(s.gname || s.gemail || 'Google account')}</b> · team code active`;
     } else if (s.syncKey) {
@@ -486,6 +502,15 @@
     }
     b.innerHTML = html;
 
+    // training-mode banner (highest priority on the capture screen)
+    const tb = $('trainingBanner');
+    if (s.trainingMode && !crusadeStarted()) {
+      tb.className = 'banner';
+      tb.innerHTML = `🎓 <b>TRAINING MODE</b> — these are practice entries. Erase them in Settings → “Erase ALL training data” when training is done.`;
+    } else {
+      tb.classList.add('hidden');
+    }
+
     // install prompt banner (capture view)
     const ib = $('installBanner');
     if (!IS_STANDALONE() && s.welcomed) {
@@ -500,6 +525,78 @@
     }
   }
 
+  // ---------- training mode & data lock ----------
+  function refreshTrainingUi() {
+    const s = Settings.load();
+    const status = $('trainingStatus');
+    const toggle = $('trainingToggleBtn');
+    const wipe = $('trainingWipeBtn');
+    if (crusadeStarted()) {
+      status.innerHTML = '🔒 <b>Data lock active</b> — the crusade has started. Deletion is permanently disabled everywhere to protect the harvest.';
+      toggle.disabled = true;
+      toggle.classList.add('hidden');
+      wipe.classList.add('hidden');
+      return;
+    }
+    toggle.classList.remove('hidden');
+    wipe.classList.remove('hidden');
+    toggle.disabled = false;
+    if (s.trainingMode) {
+      toggle.textContent = 'Turn training mode OFF';
+      toggle.className = 'btn btn-primary';
+      wipe.disabled = false;
+      status.innerHTML = '🎓 <b>Training mode is ON</b> — everything captured now is practice data (marked on each record and in the central dump). Tap the red button when training is done to wipe it all.';
+    } else {
+      toggle.textContent = 'Turn training mode ON';
+      toggle.className = 'btn btn-outline';
+      wipe.disabled = true;
+      status.innerHTML = 'Practice mode for training volunteers. While ON, everything captured is marked as <b>practice data</b> and can be wiped in one tap — without touching any real record.';
+    }
+  }
+
+  $('trainingToggleBtn').addEventListener('click', () => {
+    const s = Settings.load();
+    Settings.save({ trainingMode: !s.trainingMode });
+    refreshTrainingUi();
+    updateSyncBanner();
+    toast(s.trainingMode ? 'Training mode OFF — capturing real data now' : '🎓 Training mode ON — entries are practice data', s.trainingMode ? 'ok' : '');
+  });
+
+  let trainWipeArmed = false;
+  $('trainingWipeBtn').addEventListener('click', async () => {
+    const s = Settings.load();
+    if (!s.trainingMode) { toast('Turn training mode ON first', 'err'); return; }
+    if (!trainWipeArmed) {
+      trainWipeArmed = true;
+      $('trainingWipeBtn').textContent = '⚠ Tap again to erase ALL training data';
+      setTimeout(() => { trainWipeArmed = false; $('trainingWipeBtn').textContent = '🧹 Erase ALL training data'; }, 4000);
+      return;
+    }
+    trainWipeArmed = false;
+    $('trainingWipeBtn').textContent = '🧹 Erase ALL training data';
+    // wipe local practice records
+    const all = await DB.all();
+    let localWiped = 0;
+    for (const rec of all) {
+      if (rec.training === 1) { await DB.remove(rec.id); localWiped++; }
+    }
+    // wipe the central dump's practice rows (also clears the server-side queue)
+    Settings.save({ pendingDeletes: [], pendingTrainingDeletes: [] });
+    let serverMsg = '';
+    const st = Settings.load();
+    if (st.appsUrl && navigator.onLine) {
+      try {
+        const res = await Sync.wipeTrainingData();
+        serverMsg = ` · ${res.deleted} wiped from the central dump`;
+      } catch (e) {
+        serverMsg = ' · central dump wipe failed (will not retry automatically — use the leader dashboard button)';
+      }
+    }
+    refreshStats();
+    refreshRecords();
+    toast(`🧹 Training data erased (${localWiped} on this phone${serverMsg})`, 'ok');
+  });
+
   // ---------- settings ----------
   function fillSettingsForm() {
     const s = Settings.load();
@@ -511,8 +608,11 @@
     $('deviceIdShort').textContent = s.deviceId;
     $('appVersion').textContent = APP_VERSION;
     const cfg = window.APP_CONFIG || {};
-    if (cfg.ADMIN_URL) $('adminLink').href = cfg.ADMIN_URL;
+    const adminUrl = location.origin + (cfg.ADMIN_URL || '/api/admin');
+    $('adminLink').href = adminUrl;
+    $('adminLink').removeAttribute('target'); // same-tab: blank tabs can be blocked in installed apps
     updateGsiStatus();
+    refreshTrainingUi();
   }
   function updateGsiStatus() {
     const s = Settings.load();
