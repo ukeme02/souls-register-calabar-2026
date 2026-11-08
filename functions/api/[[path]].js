@@ -171,7 +171,8 @@ async function adminPage(request, env, keyOk, adminKey) {
     return new Response(
       `<!DOCTYPE html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
        <title>Souls Register — Leader</title>
-       <body style="font-family:var(--font-app,-apple-system,sans-serif);background:#0d1b3e;color:#fff;display:grid;place-items:center;height:100vh;margin:0">
+       <link rel="stylesheet" href="/css/fonts.css">
+       <body style="font-family:var(--font-app,'Nunito Sans Expanded',-apple-system,sans-serif);background:#0d1b3e;color:#fff;display:grid;place-items:center;height:100vh;margin:0">
        <form method="GET" style="text-align:center">
          <div style="font-size:40px">✝</div>
          <h2>Souls Register — Leader Access</h2>
@@ -206,8 +207,10 @@ async function adminPage(request, env, keyOk, adminKey) {
   return new Response(`<!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Souls Register — Central Dump (Leader)</title>
+<link rel="stylesheet" href="/css/fonts.css">
 <style>
-  :root { --font-app: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+  /* App font: Nunito Sans Expanded — self-hosted /css/fonts.css, locked 2026-11-08. */
+  :root { --font-app: "Nunito Sans Expanded", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
   * { box-sizing: border-box; }
   body { font-family: var(--font-app); margin: 0; background: #f2f5fb; color: #18213a; }
   header { background: linear-gradient(135deg,#0d1b3e,#16306e); color: #fff; padding: 18px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }

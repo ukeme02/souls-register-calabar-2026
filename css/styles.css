@@ -2,8 +2,9 @@
 :root {
   /* ⚠️ THE APP FONT — single source of truth for the whole app AND landing page.
      NEVER change or remove without the owner's explicit instruction.
-     (Owner: the user; locked 2026-11-08. To swap the typeface, edit ONLY this line.) */
-  --font-app: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+     Owner chose "Nunito Sans Expanded" (2026-11-08) — self-hosted, see css/fonts.css.
+     To swap the typeface, edit ONLY this line. */
+  --font-app: "Nunito Sans Expanded", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --navy: #0d1b3e;
   --navy-2: #16306e;
   --blue: #1d4ed8;
