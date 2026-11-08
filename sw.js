@@ -1,5 +1,5 @@
 /* ============ Service worker — offline app shell ============ */
-const CACHE = 'souls-register-v4';
+const CACHE = 'souls-register-v5';
 const SHELL = [
   './',
   './index.html',
@@ -8,6 +8,7 @@ const SHELL = [
   './fonts/nunito-sans-expanded-latin.woff2',
   './fonts/nunito-sans-expanded-latin-ext.woff2',
   './js/config.js',
+  './js/xlsx.js',
   './js/db.js',
   './js/sync.js',
   './js/app.js',

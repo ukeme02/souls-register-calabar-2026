@@ -15,6 +15,72 @@ export function esc(s) {
   }[c]));
 }
 
+/* ---- minimal true .xlsx writer (stored zip, no dependencies) ---- */
+let CRC_TABLE = null;
+function crcTable() {
+  if (CRC_TABLE) return CRC_TABLE;
+  CRC_TABLE = new Int32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    CRC_TABLE[n] = c;
+  }
+  return CRC_TABLE;
+}
+function crc32(buf) {
+  const t = crcTable();
+  let c = -1;
+  for (let i = 0; i < buf.length; i++) c = t[(c ^ buf[i]) & 0xff] ^ (c >>> 8);
+  return (c ^ -1) >>> 0;
+}
+const u16 = (v) => [v & 0xff, (v >> 8) & 0xff];
+const u32 = (v) => [v & 0xff, (v >> 8) & 0xff, (v >> 16) & 0xff, (v >>> 24) & 0xff];
+
+export function buildXlsx(sheetName, rows) {
+  const te = new TextEncoder();
+  const colRef = (n) => {
+    let s = '';
+    while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); }
+    return s;
+  };
+  const sheet = rows.map((row, ri) =>
+    '<row r="' + (ri + 1) + '">' + row.map((cell, ci) => {
+      if (cell === null || cell === undefined || cell === '') return '';
+      const ref = colRef(ci + 1) + (ri + 1);
+      return typeof cell === 'number' && isFinite(cell)
+        ? '<c r="' + ref + '"><v>' + cell + '</v></c>'
+        : '<c r="' + ref + '" t="inlineStr"><is><t xml:space="preserve">' + esc(cell) + '</t></is></c>';
+    }).join('') + '</row>'
+  ).join('');
+  const files = [
+    { name: '[Content_Types].xml', data: te.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>') },
+    { name: '_rels/.rels', data: te.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>') },
+    { name: 'xl/workbook.xml', data: te.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Souls" sheetId="1" r:id="rId1"/></sheets></workbook>') },
+    { name: 'xl/_rels/workbook.xml.rels', data: te.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>') },
+    { name: 'xl/worksheets/sheet1.xml', data: te.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>' + sheet + '</sheetData></worksheet>') },
+  ];
+  const chunks = [];
+  const central = [];
+  let offset = 0;
+  for (const file of files) {
+    const nameBytes = te.encode(file.name);
+    const crc = crc32(file.data);
+    const local = new Uint8Array([...u32(0x04034b50), ...u16(20), ...u16(0), ...u16(0), ...u16(0), ...u16(0), ...u32(crc), ...u32(file.data.length), ...u32(file.data.length), ...u16(nameBytes.length), ...u16(0), ...nameBytes]);
+    chunks.push(local, file.data);
+    central.push(new Uint8Array([...u32(0x02014b50), ...u16(20), ...u16(20), ...u16(0), ...u16(0), ...u16(0), ...u16(0), ...u32(crc), ...u32(file.data.length), ...u32(file.data.length), ...u16(nameBytes.length), ...u16(0), ...u16(0), ...u16(0), ...u16(0), ...u32(0), ...u32(offset), ...nameBytes]));
+    offset += local.length + file.data.length;
+  }
+  let centralSize = 0;
+  for (const c of central) centralSize += c.length;
+  const eocd = new Uint8Array([...u32(0x06054b50), ...u16(0), ...u16(0), ...u16(files.length), ...u16(files.length), ...u32(centralSize), ...u32(offset), ...u16(0)]);
+  // assemble without spread (large sheets would overflow argument limits)
+  let total = offset + centralSize + eocd.length;
+  const out = new Uint8Array(total);
+  let o = 0;
+  for (const part of [...chunks, ...central, eocd]) { out.set(part, o); o += part.length; }
+  return out;
+}
+
 export function getCookie(request, name) {
   const cookie = request.headers.get('Cookie') || '';
   const m = cookie.match(new RegExp('(?:^|;\\s*)' + name + '=([^;]+)'));
@@ -130,6 +196,7 @@ export async function buildAdminHtml(request, env) {
 <header>
   <h1>✝ Souls Register — <span class="gold">Central Dump</span></h1>
   <a class="btn btn-gold" href="/api/export.csv${kq}">⬇ Full CSV (bulk SMS)</a>
+  <a class="btn btn-gold" href="/api/export.xlsx${kq}">⬇ Excel (.xlsx)</a>
   <a class="btn btn-ghost" href="/api/phones.csv${kq}">⬇ Phones only</a>
   <a class="btn btn-ghost" href="/">← Back to app</a>
   <a class="btn btn-ghost" href="/admin?logout=1">Log out</a>

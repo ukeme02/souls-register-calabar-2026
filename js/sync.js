@@ -281,7 +281,7 @@ window.Sync = (function () {
 
   async function fetchServerCount() {
     const data = await callApi({ action: 'count', auth: authPayload() });
-    return data.count;
+    return data; // { count, trainingCount, locked }
   }
 
   async function wipeTrainingData() {

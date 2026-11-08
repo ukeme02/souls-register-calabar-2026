@@ -9,6 +9,7 @@
   const IS_STANDALONE = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 
   let sheetCount = null; // last known server count
+  let sheetTrainCount = null; // practice rows on the server
   let modalState = { id: null, editing: false, deleteArmed: false, deleteTimer: null };
   let deferredInstall = null; // captured beforeinstallprompt event
 
@@ -160,9 +161,9 @@
     if (!s.appsUrl || !Auth.isAuthed() || !navigator.onLine) return;
     try {
       const c = await Sync.fetchServerCount();
-      sheetCount = c;
-      if (c > 0) {
-        el.textContent = `🔥 ${c} soul${c === 1 ? '' : 's'} already registered — you are part of the harvest!`;
+      sheetCount = c.count;
+      if (c.count > 0) {
+        el.textContent = `🔥 ${c.count} soul${c.count === 1 ? '' : 's'} already registered — you are part of the harvest!`;
         el.classList.remove('hidden');
       }
     } catch (e) { /* silent — landing stays clean offline */ }
@@ -452,17 +453,38 @@
     return base || 'phone';
   }
 
+  function reportRows(all) {
+    return [
+      ['phone_number', 'first_name', 'middle_name', 'surname', 'gender', 'age_group', 'decision', 'address', 'prayer_request', 'counsellor', 'saved_at', 'sync_status'],
+      ...all.map((r) => [
+        digitsOnly(r.phone), r.first, r.middle, r.surname, r.gender, r.age, r.decision,
+        r.address, r.prayer, r.counsellor, r.created_at, r.synced ? 'synced' : 'pending',
+      ]),
+    ];
+  }
+
+  async function exportXlsx() {
+    const all = await DB.all();
+    if (!all.length) { toast('No records to export yet — save a soul first', 'err'); return; }
+    all.sort((a, b) => (a.created_at < b.created_at ? -1 : 1));
+    const s = Settings.load();
+    const blob = XLSXMini.build('Souls — Calabar 2026', reportRows(all));
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `my-report-${reportSlug(s)}-${stamp()}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 800);
+    toast(`Excel report downloaded — ${all.length} record${all.length === 1 ? '' : 's'}`, 'ok');
+  }
+
   async function exportFullCsv() {
     const all = await DB.all();
     if (!all.length) { toast('No records to export yet — save a soul first', 'err'); return; }
     all.sort((a, b) => (a.created_at < b.created_at ? -1 : 1));
     const s = Settings.load();
-    const header = ['phone_number', 'first_name', 'middle_name', 'surname', 'gender', 'age_group', 'decision', 'address', 'prayer_request', 'counsellor', 'saved_at', 'sync_status'];
-    const rows = all.map((r) => [
-      digitsOnly(r.phone), r.first, r.middle, r.surname, r.gender, r.age, r.decision,
-      r.address, r.prayer, r.counsellor, r.created_at, r.synced ? 'synced' : 'pending',
-    ].map(csvCell).join(','));
-    downloadFile(`my-report-${reportSlug(s)}-${stamp()}.csv`, [header.join(','), ...rows].join('\r\n'));
+    const [header, ...rows] = reportRows(all);
+    downloadFile(`my-report-${reportSlug(s)}-${stamp()}.csv`, [header.join(','), ...rows.map((r) => r.map(csvCell).join(','))].join('\r\n'));
     toast(`Report downloaded — ${all.length} record${all.length === 1 ? '' : 's'} from this phone`, 'ok');
   }
 
@@ -478,6 +500,7 @@
     toast(`Exported ${phones.length} phone numbers`, 'ok');
   }
 
+  $('exportXlsxBtn').addEventListener('click', exportXlsx);
   $('exportCsvBtn').addEventListener('click', exportFullCsv);
   $('exportPhonesBtn').addEventListener('click', exportPhonesCsv);
   $('exportCsvSync').addEventListener('click', exportFullCsv);
@@ -492,6 +515,11 @@
     $('syncPending').textContent = pending;
     $('statTotal').textContent = sheetCount == null ? '—' : sheetCount;
     $('syncSheet').textContent = sheetCount == null ? '—' : sheetCount;
+    const tr = $('syncTrain');
+    if (tr) {
+      tr.classList.toggle('hidden', !sheetTrainCount);
+      tr.textContent = '🎓 +' + sheetTrainCount + ' practice row' + (sheetTrainCount === 1 ? '' : 's') + ' on the server (not counted)';
+    }
   }
 
   function lastSyncText() {
@@ -519,7 +547,7 @@
     // best-effort server count
     if (s.appsUrl && Auth.isAuthed() && navigator.onLine) {
       Sync.fetchServerCount()
-        .then((c) => { sheetCount = c; refreshStats(); })
+        .then((c) => { sheetCount = c.count; sheetTrainCount = c.trainingCount; refreshStats(); })
         .catch(() => {});
     }
   }
@@ -531,7 +559,12 @@
     const res = await Sync.syncNow({ manual: true });
     btn.disabled = false;
     btn.textContent = '⟳ Sync now';
-    if (res.ok) toast(`Synced ${res.added} record${res.added === 1 ? '' : 's'} ✓`, 'ok');
+    if (res.ok) {
+      const training = Settings.load().trainingMode;
+      toast(training
+        ? `Synced ${res.added} practice record${res.added === 1 ? '' : 's'} ✓ · not counted — wipe training data when done`
+        : `Synced ${res.added} record${res.added === 1 ? '' : 's'} to the central dump ✓`, 'ok');
+    }
     else if (res.reason === 'offline') toast('You are offline — will sync automatically', 'err');
     else if (res.reason === 'not-configured') toast('No team connection set — check Settings', 'err');
     else if (res.reason === 'not-authed') toast('Add the team code in Settings first', 'err');
@@ -755,7 +788,7 @@
       sheetCount = null;
       const s = Settings.load();
       if (s.appsUrl && navigator.onLine) {
-        Sync.fetchServerCount().then((c) => { sheetCount = c; refreshStats(); }).catch(() => {});
+        Sync.fetchServerCount().then((c) => { sheetCount = c.count; sheetTrainCount = c.trainingCount; refreshStats(); }).catch(() => {});
       }
     }
     if ($('view-records').classList.contains('active')) refreshRecords();
@@ -765,6 +798,23 @@
   // expose for inline onclick in banner
   window.showView = showView;
 
+  // ---------- scroll-reveal animations (landing) ----------
+  function setupReveals() {
+    if (!('IntersectionObserver' in window)) {
+      document.querySelectorAll('.reveal').forEach((el) => el.classList.add('in'));
+      return;
+    }
+    const io = new IntersectionObserver((entries) => {
+      for (const en of entries) {
+        if (en.isIntersecting) {
+          en.target.classList.add('in');
+          io.unobserve(en.target);
+        }
+      }
+    }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
+    document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
+  }
+
   // ---------- boot ----------
   async function boot() {
     updateNetPill();
@@ -773,6 +823,13 @@
     const s = Settings.load();
     if (!s.welcomed) showView('welcome');
     else showView('capture');
+    setupReveals();
+    // fetch the central count right away so counters never sit on "—"
+    if (s.appsUrl && Auth.isAuthed() && navigator.onLine) {
+      Sync.fetchServerCount()
+        .then((c) => { sheetCount = c.count; sheetTrainCount = c.trainingCount; refreshStats(); })
+        .catch(() => {});
+    }
     if ('serviceWorker' in navigator) {
       try { await navigator.serviceWorker.register('sw.js'); } catch (e) { /* dev/file:// */ }
     }

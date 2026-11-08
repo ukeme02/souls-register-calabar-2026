@@ -19,7 +19,7 @@
  * no OAuth client setup needed for that check).
  * ==========================================================================*/
 
-import { teamCodeOf, adminKeyOf, adminCookieIdentity, buildAdminHtml } from '../_admin.js';
+import { teamCodeOf, adminKeyOf, adminCookieIdentity, buildAdminHtml, buildXlsx } from '../_admin.js';
 
 const JSON_HEADERS = {
   'Content-Type': 'application/json',
@@ -69,6 +69,13 @@ async function checkAuth(request, env, body) {
 
 const COLUMNS = '(id, first_name, middle_name, surname, phone, gender, age_group, decision, address, prayer_request, counsellor, device_id, created_at, updated_at, synced_by, server_time, training)';
 
+/** Real count + practice count in one call. */
+async function counts(env) {
+  const row = await env.DB.prepare('SELECT COUNT(*) AS c FROM souls WHERE training = 0').first();
+  const tr = await env.DB.prepare('SELECT COUNT(*) AS c FROM souls WHERE training = 1').first();
+  return { count: row ? row.c : 0, trainingCount: tr ? tr.c : 0 };
+}
+
 // Deletion lock: from the moment the crusade begins (Nov 12, 2026, 4:00 PM WAT)
 // no record may ever be deleted — not even with the admin key.
 const CRUSADE_START_UTC = Date.UTC(2026, 10, 12, 15, 0, 0);
@@ -96,12 +103,12 @@ async function handleApi(request, env) {
   if (!identity) return json({ ok: false, error: 'Not authorized — wrong team code.' }, 401);
 
   if (action === 'ping') {
-    const row = await env.DB.prepare('SELECT COUNT(*) AS c FROM souls WHERE training = 0').first();
-    return json({ ok: true, message: 'Souls Register central dump is live ✝', count: row ? row.c : 0, locked: crusadeStarted() });
+    const c = await counts(env);
+    return json({ ok: true, message: 'Souls Register central dump is live ✝', count: c.count, trainingCount: c.trainingCount, locked: crusadeStarted() });
   }
   if (action === 'count') {
-    const row = await env.DB.prepare('SELECT COUNT(*) AS c FROM souls WHERE training = 0').first();
-    return json({ ok: true, count: row ? row.c : 0, locked: crusadeStarted() });
+    const c = await counts(env);
+    return json({ ok: true, count: c.count, trainingCount: c.trainingCount, locked: crusadeStarted() });
   }
   if (action === 'push') {
     const records = (body && body.records) || [];
@@ -126,8 +133,8 @@ async function handleApi(request, env) {
     for (let i = 0; i < stmts.length; i += 100) {
       await env.DB.batch(stmts.slice(i, i + 100));
     }
-    const row = await env.DB.prepare('SELECT COUNT(*) AS c FROM souls WHERE training = 0').first();
-    return json({ ok: true, added, updated, count: row ? row.c : 0 });
+    const c = await counts(env);
+    return json({ ok: true, added, updated, count: c.count, trainingCount: c.trainingCount });
   }
   if (action === 'delete') {
     // Hard lock at crusade start: nothing is ever deleted again.
@@ -178,6 +185,27 @@ async function csvResponse(env, phonesOnly, keyOk) {
   });
 }
 
+async function xlsxResponse(env, keyOk) {
+  if (!keyOk) return new Response('Unauthorized', { status: 401 });
+  const { results } = await env.DB.prepare('SELECT * FROM souls WHERE training = 0 ORDER BY server_time ASC').all();
+  const rows = [
+    ['phone_number', 'first_name', 'middle_name', 'surname', 'gender', 'age_group', 'decision', 'address', 'prayer_request', 'counsellor', 'device', 'saved_at', 'updated_at', 'synced_by', 'server_time'],
+    ...(results || []).map((r) => [
+      String(r.phone || ''), r.first_name, r.middle_name, r.surname, r.gender, r.age_group,
+      r.decision, r.address, r.prayer_request, r.counsellor, r.device_id,
+      r.created_at, r.updated_at, r.synced_by, r.server_time,
+    ]),
+  ];
+  const bytes = buildXlsx('Souls', rows);
+  const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
+  return new Response(bytes, {
+    headers: {
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': `attachment; filename="souls-calabar-2026-${stamp}.xlsx"`,
+    },
+  });
+}
+
 export async function onRequestGet(context) {
   const { request, env } = context;
   const url = new URL(request.url);
@@ -190,6 +218,7 @@ export async function onRequestGet(context) {
     if (!keyOk) return new Response('Unauthorized', { status: 401 });
     return new Response(await buildAdminHtml(request, env), { headers: { 'Content-Type': 'text/html;charset=utf-8' } });
   }
+  if (path.endsWith('/export.xlsx')) return xlsxResponse(env, keyParam === adminKeyOf(env) || keyParam === teamCodeOf(env) || !!adminCookieIdentity(request, env));
   if (path.endsWith('/export.csv')) return csvResponse(env, false, keyParam === adminKeyOf(env) || keyParam === teamCodeOf(env) || !!adminCookieIdentity(request, env));
   if (path.endsWith('/phones.csv')) return csvResponse(env, true, keyParam === adminKeyOf(env) || keyParam === teamCodeOf(env) || !!adminCookieIdentity(request, env));
   if (path === '/api' || path === '/api/') return handleApi(request, env);

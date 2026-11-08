@@ -41,13 +41,22 @@
         <p class="welcome-evangelist">with Evangelist <b>Daniel Kolenda</b><br />
           <span class="welcome-muted">Successor of Evangelist Reinhard Bonnke</span></p>
 
-        <div class="welcome-when">
-          <div class="when-row"><span class="when-ico">📅</span><div><b>November 12 – 15, 2026</b><small>Thursday – Sunday · 4 days of harvest</small></div></div>
-          <div class="when-row"><span class="when-ico">🕓</span><div><b>4:00 PM daily</b><small>Come early · Bring someone</small></div></div>
-          <div class="when-row"><span class="when-ico">📍</span><div><b>UNICROSS Field, Ekpo Abasi</b><small>(formerly CRUTECH) · Calabar, Cross River State</small></div></div>
+        <div class="welcome-when reveal">
+          <div class="when-row">
+            <span class="when-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg></span>
+            <div><b>November 12 – 15, 2026</b><small>Thursday – Sunday · 4 days of harvest</small></div>
+          </div>
+          <div class="when-row">
+            <span class="when-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+            <div><b>4:00 PM daily</b><small>Come early · Bring someone</small></div>
+          </div>
+          <div class="when-row">
+            <span class="when-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 21s-7-5.6-7-11a7 7 0 0 1 14 0c0 5.4-7 11-7 11z"/><circle cx="12" cy="10" r="2.6"/></svg></span>
+            <div><b>UNICROSS Field, Ekpo Abasi</b><small>(formerly CRUTECH) · Calabar, Cross River State</small></div>
+          </div>
         </div>
 
-        <div id="countdown" class="countdown">
+        <div id="countdown" class="countdown reveal">
           <svg width="0" height="0" style="position:absolute" aria-hidden="true">
             <defs>
               <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -70,45 +79,45 @@
           </div>
         </div>
 
-        <p class="welcome-slogan">“Africa shall be saved!”</p>
+        <p class="welcome-slogan reveal">“Africa shall be saved!”</p>
 
-        <div class="welcome-ctas">
-          <button id="startCaptureBtn" class="btn btn-gold big">Start capturing souls →</button>
-          <button id="installBtn" class="btn btn-ghost big hidden">📲 Install the app on this phone</button>
+        <div class="welcome-ctas reveal">
+          <button id="startCaptureBtn" class="btn btn-hero btn-hero-primary">Start capturing souls →</button>
+          <button id="installBtn" class="btn btn-hero btn-hero-secondary hidden">📲 Install the app on this phone</button>
         </div>
         <span id="landingCount" class="live-count hidden"></span>
         <p class="welcome-hint">Set your name once in Settings — then just fill the form and tap SAVE for every soul.</p>
       </div>
 
       <div class="how-it-works">
-        <h3>How this tool works</h3>
-        <p class="hiw-sub">Built for the counselling team — simple at the field, powerful at the office.</p>
-        <div class="steps-grid">
+        <h3 class="reveal">How this tool works</h3>
+        <p class="hiw-sub reveal">Built for the counselling team — simple at the field, powerful at the office.</p>
+        <div class="steps-grid reveal">
           <div class="step-card">
             <span class="step-num">1</span>
             <div>
-              <b>📱 Capture on the spot — even offline</b>
+              <b>Capture on the spot — even offline</b>
               <small>No network at the field? No problem. Every soul is saved on the phone the moment you tap SAVE — names, phone number, address, prayer request.</small>
             </div>
           </div>
           <div class="step-card">
             <span class="step-num">2</span>
             <div>
-              <b>☁️ Everything compiles into one central dump</b>
+              <b>Everything compiles into one central dump</b>
               <small>The instant a phone gets internet, its entries flow automatically into one secure central register. No Google Sheet stress, no copying — duplicates are blocked automatically.</small>
             </div>
           </div>
           <div class="step-card">
             <span class="step-num">3</span>
             <div>
-              <b>💬 Bulk-SMS follow-up in one tap</b>
+              <b>Bulk-SMS follow-up in one tap</b>
               <small>The leader's dashboard shows the live count of souls and downloads a ready-made phone-number CSV that plugs straight into any bulk-SMS service for follow-up messages.</small>
             </div>
           </div>
         </div>
       </div>
 
-      <div id="installCard" class="install-card hidden">
+      <div id="installCard" class="install-card hidden reveal">
           <span class="ic-ico">📲</span>
           <h3>Install Souls Register</h3>
           <p>Add it to your home screen — it opens full-screen like a normal app and works even without network.</p>
@@ -214,8 +223,9 @@
         <h2>📤 My report — this phone</h2>
         <p class="muted small" style="margin:0 0 4px">Download everything captured on <b>this phone</b> as a CSV — works even with no network, anytime you need to send a report to your leader or the ICT team.</p>
         <div class="toolbar-actions">
-          <button id="exportCsvBtn" class="btn btn-primary">⬇ My CSV report</button>
-          <button id="exportPhonesBtn" class="btn btn-outline">⬇ My phone numbers</button>
+          <button id="exportXlsxBtn" class="btn btn-primary">⬇ Excel (.xlsx)</button>
+          <button id="exportCsvBtn" class="btn btn-outline">⬇ CSV report</button>
+          <button id="exportPhonesBtn" class="btn btn-outline">⬇ Phone numbers</button>
         </div>
       </div>
       <div class="toolbar">
@@ -239,6 +249,7 @@
           <div class="stat"><b id="syncPending">0</b><span>Pending</span></div>
           <div class="stat"><b id="syncSheet">—</b><span>Central dump</span></div>
         </div>
+        <div id="syncTrain" class="muted small hidden" style="margin:-6px 0 10px"></div>
         <div class="progress" id="syncProgress"><i></i></div>
         <button id="syncNowBtn" class="btn btn-primary big">⟳ Sync now</button>
         <button id="exportCsvSync" class="btn btn-outline big" style="margin-top:8px">⬇ Download my report (CSV)</button>
@@ -356,6 +367,7 @@
   <div id="toast" class="toast hidden" aria-live="polite"></div>
 
   <script src="js/config.js"></script>
+  <script src="js/xlsx.js"></script>
   <script src="js/db.js"></script>
   <script src="js/sync.js"></script>
   <script src="js/app.js"></script>
