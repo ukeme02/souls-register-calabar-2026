@@ -24,7 +24,10 @@
         <span class="brand-sub" id="brandSub">CfaN · Calabar 2026</span>
       </div>
     </div>
-    <span id="netPill" class="pill pill-offline" title="Network status">Offline</span>
+    <div class="header-actions">
+      <span id="netPill" class="pill pill-offline" title="Network status">Offline</span>
+      <button id="themeToggle" class="theme-toggle" type="button" title="Switch light / dark theme" aria-label="Switch theme">🌙</button>
+    </div>
   </header>
 
   <main id="main">
@@ -45,10 +48,26 @@
         </div>
 
         <div id="countdown" class="countdown">
-          <div class="cd-box"><b id="cdDays">–</b><span>days</span></div>
-          <div class="cd-box"><b id="cdHours">–</b><span>hrs</span></div>
-          <div class="cd-box"><b id="cdMins">–</b><span>mins</span></div>
-          <div class="cd-label" id="cdLabel">until the crusade begins</div>
+          <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+            <defs>
+              <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#ffcf3d" />
+                <stop offset="100%" stop-color="#d99e00" />
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="ring-wrap">
+            <svg class="ring" viewBox="0 0 120 120" aria-hidden="true">
+              <circle class="ring-track" cx="60" cy="60" r="52"></circle>
+              <circle class="ring-fill" id="ringFill" cx="60" cy="60" r="52" stroke-dasharray="326.7" stroke-dashoffset="326.7"></circle>
+            </svg>
+            <div class="ring-center"><b id="cdDays">–</b><span>days to go</span></div>
+          </div>
+          <div class="cd-side">
+            <div class="cd-line"><span id="cdHours">–</span><small>hours</small></div>
+            <div class="cd-line"><span id="cdMins">–</span><small>minutes</small></div>
+            <div class="cd-date" id="cdLabel">Thu Nov 12 · 4:00 PM WAT</div>
+          </div>
         </div>
 
         <p class="welcome-slogan">“Africa shall be saved!”</p>
@@ -59,26 +78,27 @@
         </div>
         <span id="landingCount" class="live-count hidden"></span>
         <p class="welcome-hint">Set your name once in Settings — then just fill the form and tap SAVE for every soul.</p>
+      </div>
 
-        <div class="how-it-works">
-          <h3>How this tool works</h3>
-          <p class="hiw-sub">Built for the counselling team — simple at the field, powerful at the office.</p>
-
-          <div class="hiw-row">
+      <div class="how-it-works">
+        <h3>How this tool works</h3>
+        <p class="hiw-sub">Built for the counselling team — simple at the field, powerful at the office.</p>
+        <div class="steps-grid">
+          <div class="step-card">
             <span class="step-num">1</span>
             <div>
               <b>📱 Capture on the spot — even offline</b>
-              <small>No network at the field? No problem. Every soul is saved on the phone the moment you tap SAVE — names, phone number, gender, address, prayer request.</small>
+              <small>No network at the field? No problem. Every soul is saved on the phone the moment you tap SAVE — names, phone number, address, prayer request.</small>
             </div>
           </div>
-          <div class="hiw-row">
+          <div class="step-card">
             <span class="step-num">2</span>
             <div>
               <b>☁️ Everything compiles into one central dump</b>
-              <small>The instant a phone gets internet, its entries flow automatically into one secure central register. No Google Sheet stress, no add-ons, no copying — it just happens. Duplicates are blocked automatically.</small>
+              <small>The instant a phone gets internet, its entries flow automatically into one secure central register. No Google Sheet stress, no copying — duplicates are blocked automatically.</small>
             </div>
           </div>
-          <div class="hiw-row">
+          <div class="step-card">
             <span class="step-num">3</span>
             <div>
               <b>💬 Bulk-SMS follow-up in one tap</b>
@@ -86,15 +106,15 @@
             </div>
           </div>
         </div>
+      </div>
 
-        <div id="installCard" class="install-card hidden">
+      <div id="installCard" class="install-card hidden">
           <span class="ic-ico">📲</span>
           <h3>Install Souls Register</h3>
           <p>Add it to your home screen — it opens full-screen like a normal app and works even without network.</p>
           <button id="installCardBtn" class="btn btn-gold">Install now — it's free</button>
           <small id="installHint">On Android Chrome: menu ⋮ → “Add to Home screen / Install app”.<br />On iPhone Safari: Share ⬆ → “Add to Home Screen”.</small>
         </div>
-      </div>
 
       <div class="welcome-footer">
         <span class="gold">✝ Souls Register</span> · built for the Great Gospel Crusade<br />
@@ -132,7 +152,7 @@
           <div id="phoneWarn" class="phone-warn hidden">⚠ This number is already saved on this phone.</div>
         </div>
 
-        <div class="field">
+        <div class="field wide">
           <label for="address">Address <i>*</i></label>
           <textarea id="address" name="address" rows="2" placeholder="Street, area, Calabar" enterkeyhint="next" required></textarea>
         </div>
@@ -173,12 +193,12 @@
           </div>
         </div>
 
-        <div class="field">
+        <div class="field wide">
           <label for="prayer">Prayer request</label>
           <textarea id="prayer" name="prayer" rows="2" placeholder="Anything they want prayer for…"></textarea>
         </div>
 
-        <div class="field">
+        <div class="field wide">
           <label for="formCounsellor">Counsellor <small>(optional — who counselled this soul? leave empty if unknown)</small></label>
           <input id="formCounsellor" name="formCounsellor" type="text" placeholder="e.g. Joy Effiom" enterkeyhint="done" />
         </div>

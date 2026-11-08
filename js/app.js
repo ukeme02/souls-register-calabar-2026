@@ -61,7 +61,34 @@
     showView('capture');
   });
 
-  // ---------- countdown ----------
+  // ---------- theme (light / dark) ----------
+  const THEME_KEY = 'souls_theme';
+  function themeSetting() { return localStorage.getItem(THEME_KEY) || 'auto'; }
+  function systemDark() { return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; }
+  function effectiveTheme() {
+    const s = themeSetting();
+    return s === 'auto' ? (systemDark() ? 'dark' : 'light') : s;
+  }
+  function applyTheme() {
+    document.documentElement.dataset.theme = effectiveTheme();
+    $('themeToggle').textContent = effectiveTheme() === 'dark' ? '☀️' : '🌙';
+  }
+  $('themeToggle').addEventListener('click', () => {
+    // cycle: auto → light → dark → auto
+    const order = ['auto', 'light', 'dark'];
+    const next = order[(order.indexOf(themeSetting()) + 1) % order.length];
+    localStorage.setItem(THEME_KEY, next);
+    applyTheme();
+    toast(next === 'auto' ? 'Theme: follows your device' : 'Theme: ' + next, 'ok');
+  });
+  if (window.matchMedia) {
+    try { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme); } catch (e) { /* older browsers */ }
+  }
+  applyTheme();
+
+  // ---------- countdown (progress ring) ----------
+  const RING_C = 2 * Math.PI * 52; // circumference of the r=52 ring
+  const RING_WINDOW_MS = 30 * 86400000; // arc drains across the final 30 days
   let countdownTimer = null;
   function startCountdown() {
     updateCountdown();
@@ -69,20 +96,31 @@
     countdownTimer = setInterval(updateCountdown, 30000);
   }
   function updateCountdown() {
-    const now = Date.now();
     const el = $('countdown');
     if (!el) return;
+    const now = Date.now();
     if (now < CRUSADE_START_UTC) {
       const ms = CRUSADE_START_UTC - now;
       $('cdDays').textContent = Math.floor(ms / 86400000);
       $('cdHours').textContent = Math.floor(ms / 3600000) % 24;
       $('cdMins').textContent = Math.floor(ms / 60000) % 60;
-      $('cdLabel').textContent = 'until the crusade begins';
+      $('cdLabel').textContent = 'Thu Nov 12 · 4:00 PM WAT';
+      // arc: drains from full to zero across the final 30 days
+      const progress = Math.max(0, Math.min(1, ms / RING_WINDOW_MS));
+      $('ringFill').style.strokeDashoffset = (RING_C * (1 - progress)).toFixed(1);
     } else if (now <= CRUSADE_END_UTC) {
       const day = Math.floor((now - CRUSADE_START_UTC) / 86400000) + 1;
-      el.innerHTML = `<div class="cd-box" style="min-width:200px"><b style="color:#4ade80">LIVE NOW</b><span>Day ${day} of 4 · see you by 4 PM</span></div>`;
+      $('cdDays').textContent = '✝';
+      $('cdHours').textContent = 'LIVE';
+      $('cdMins').textContent = 'NOW';
+      $('cdLabel').textContent = `Day ${day} of 4 · see you by 4 PM`;
+      $('ringFill').style.strokeDashoffset = 0;
     } else {
-      el.innerHTML = `<div class="cd-box" style="min-width:200px"><b>CONCLUDED</b><span>Thank you for labouring in the harvest</span></div>`;
+      $('cdDays').textContent = '✓';
+      $('cdHours').textContent = 'HARVEST';
+      $('cdMins').textContent = 'DONE';
+      $('cdLabel').textContent = 'Crusade concluded — thank you for labouring';
+      $('ringFill').style.strokeDashoffset = 0;
     }
   }
 
