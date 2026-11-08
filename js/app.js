@@ -2,13 +2,15 @@
 (function () {
   'use strict';
 
-  const APP_VERSION = '1.0.0';
+  const APP_VERSION = '1.1.0';
   const $ = (id) => document.getElementById(id);
   const CRUSADE_START_UTC = Date.UTC(2026, 10, 12, 15, 0, 0); // Nov 12, 2026, 4:00 PM WAT
   const CRUSADE_END_UTC = Date.UTC(2026, 10, 15, 23, 59, 59);
+  const IS_STANDALONE = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 
   let sheetCount = null; // last known server count
   let modalState = { id: null, editing: false, deleteArmed: false, deleteTimer: null };
+  let deferredInstall = null; // captured beforeinstallprompt event
 
   // ---------- tiny helpers ----------
   function toast(msg, type) {
@@ -46,7 +48,7 @@
     if (name === 'records') refreshRecords();
     if (name === 'sync') refreshSyncView();
     if (name === 'settings') { fillSettingsForm(); renderGsi(); }
-    if (name === 'welcome') startCountdown();
+    if (name === 'welcome') { startCountdown(); refreshLandingCount(); updateInstallUi(); }
   }
 
   document.querySelectorAll('#tabbar .tab').forEach((btn) => {
@@ -82,6 +84,62 @@
       el.innerHTML = `<div class="cd-box" style="min-width:200px"><b>CONCLUDED</b><span>Thank you for labouring in the harvest</span></div>`;
     }
   }
+
+  // ---------- PWA install prompt ----------
+  function updateInstallUi() {
+    const showCard = !IS_STANDALONE();
+    $('installCard').classList.toggle('hidden', !showCard);
+    // The native one-tap button is only available when the browser fired beforeinstallprompt
+    $('installBtn').classList.toggle('hidden', !(deferredInstall && !IS_STANDALONE()));
+    $('installCardBtn').classList.toggle('hidden', !deferredInstall);
+  }
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredInstall = e;
+    updateInstallUi();
+    updateSyncBanner(); // refresh the in-app install banner too
+  });
+  window.addEventListener('appinstalled', () => {
+    deferredInstall = null;
+    updateInstallUi();
+    toast('📲 Installed! Find “Souls Register” on your home screen.', 'ok');
+  });
+  async function promptInstall() {
+    if (!deferredInstall) return;
+    deferredInstall.prompt();
+    const choice = await deferredInstall.userChoice;
+    if (choice && choice.outcome === 'accepted') deferredInstall = null;
+    updateInstallUi();
+  }
+  $('installBtn').addEventListener('click', promptInstall);
+  $('installCardBtn').addEventListener('click', promptInstall);
+
+  // ---------- landing live counter ----------
+  async function refreshLandingCount() {
+    const el = $('landingCount');
+    const s = Settings.load();
+    if (!s.appsUrl || !Auth.isAuthed() || !navigator.onLine) return;
+    try {
+      const c = await Sync.fetchServerCount();
+      sheetCount = c;
+      if (c > 0) {
+        el.textContent = `🔥 ${c} soul${c === 1 ? '' : 's'} already registered — you are part of the harvest!`;
+        el.classList.remove('hidden');
+      }
+    } catch (e) { /* silent — landing stays clean offline */ }
+  }
+
+  // ---------- sync progress bar ----------
+  document.addEventListener('app:sync-started', () => $('syncProgress').classList.add('on'));
+  document.addEventListener('app:sync-progress', (e) => {
+    const p = $('syncProgress');
+    if (e.detail && e.detail.done) p.querySelector('i').style.width = '100%';
+  });
+  document.addEventListener('app:sync-done', () => {
+    const p = $('syncProgress');
+    p.classList.remove('on');
+    p.querySelector('i').style.width = '';
+  });
 
   // ---------- network pill ----------
   function updateNetPill() {
@@ -427,6 +485,19 @@
       b.className = 'banner hidden';
     }
     b.innerHTML = html;
+
+    // install prompt banner (capture view)
+    const ib = $('installBanner');
+    if (!IS_STANDALONE() && s.welcomed) {
+      ib.classList.remove('hidden');
+      ib.innerHTML = deferredInstall
+        ? `📲 Install this app for full-screen offline use.<button class="btn btn-gold" id="installBannerBtn2">Install</button>`
+        : `📲 Tip: Chrome menu ⋮ → “Add to Home screen” for the app experience.`;
+      const b2 = document.getElementById('installBannerBtn2');
+      if (b2) b2.addEventListener('click', promptInstall);
+    } else {
+      ib.classList.add('hidden');
+    }
   }
 
   // ---------- settings ----------

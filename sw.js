@@ -1,5 +1,5 @@
 /* ============ Service worker — offline app shell ============ */
-const CACHE = 'souls-register-v2';
+const CACHE = 'souls-register-v3';
 const SHELL = [
   './',
   './index.html',

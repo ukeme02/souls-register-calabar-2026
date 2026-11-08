@@ -31,14 +31,15 @@
     <!-- ============ WELCOME / LANDING ============ -->
     <section id="view-welcome" class="view welcome" aria-label="Welcome">
       <div class="welcome-hero">
-        <div class="welcome-cross">✝</div>
-        <p class="welcome-kicker">Christ for all Nations presents</p>
+        <div class="hero-cross">✝</div>
+        <span class="hero-badge">✦ Christ for all Nations</span>
+        <p class="welcome-kicker">Calabar · Cross River State</p>
         <h2 class="welcome-title">THE GREAT<br />GOSPEL CRUSADE</h2>
         <p class="welcome-evangelist">with Evangelist <b>Daniel Kolenda</b><br />
           <span class="welcome-muted">Successor of Evangelist Reinhard Bonnke</span></p>
 
         <div class="welcome-when">
-          <div class="when-row"><span class="when-ico">📅</span><div><b>November 12 – 15, 2026</b><small>Thursday – Sunday</small></div></div>
+          <div class="when-row"><span class="when-ico">📅</span><div><b>November 12 – 15, 2026</b><small>Thursday – Sunday · 4 days of harvest</small></div></div>
           <div class="when-row"><span class="when-ico">🕓</span><div><b>4:00 PM daily</b><small>Come early · Bring someone</small></div></div>
           <div class="when-row"><span class="when-ico">📍</span><div><b>UNICROSS Field, Ekpo Abasi</b><small>(formerly CRUTECH) · Calabar, Cross River State</small></div></div>
         </div>
@@ -52,29 +53,58 @@
 
         <p class="welcome-slogan">“Africa shall be saved!”</p>
 
-        <button id="startCaptureBtn" class="btn btn-gold big">Start capturing souls →</button>
+        <div class="welcome-ctas">
+          <button id="startCaptureBtn" class="btn btn-gold big">Start capturing souls →</button>
+          <button id="installBtn" class="btn btn-ghost big hidden">📲 Install the app on this phone</button>
+        </div>
+        <span id="landingCount" class="live-count hidden"></span>
         <p class="welcome-hint">Set your name once in Settings — then just fill the form and tap SAVE for every soul.</p>
 
         <div class="how-it-works">
-          <h3>How this app works</h3>
-          <div class="hiw-row"><span class="hiw-ico">📱</span>
-            <div><b>Capture on the spot — even offline</b>
-            <small>No network at the field? No problem. Every soul is saved on the phone instantly and flows out the moment internet returns.</small></div>
+          <h3>How this tool works</h3>
+          <p class="hiw-sub">Built for the counselling team — simple at the field, powerful at the office.</p>
+
+          <div class="hiw-row">
+            <span class="step-num">1</span>
+            <div>
+              <b>📱 Capture on the spot — even offline</b>
+              <small>No network at the field? No problem. Every soul is saved on the phone the moment you tap SAVE — names, phone number, gender, address, prayer request.</small>
+            </div>
           </div>
-          <div class="hiw-row"><span class="hiw-ico">☁️</span>
-            <div><b>One central dump — zero Google Sheet stress</b>
-            <small>Every phone's entries compile themselves into one secure central register. No Apps Script, no add-ons, no copying — it just happens.</small></div>
+          <div class="hiw-row">
+            <span class="step-num">2</span>
+            <div>
+              <b>☁️ Everything compiles into one central dump</b>
+              <small>The instant a phone gets internet, its entries flow automatically into one secure central register. No Google Sheet stress, no add-ons, no copying — it just happens. Duplicates are blocked automatically.</small>
+            </div>
           </div>
-          <div class="hiw-row"><span class="hiw-ico">💬</span>
-            <div><b> Bulk-SMS CSV in one tap</b>
-            <small>The leader dashboard shows the live count of souls and downloads the ready-made phone-number CSV for follow-up texts.</small></div>
+          <div class="hiw-row">
+            <span class="step-num">3</span>
+            <div>
+              <b>💬 Bulk-SMS follow-up in one tap</b>
+              <small>The leader's dashboard shows the live count of souls and downloads a ready-made phone-number CSV that plugs straight into any bulk-SMS service for follow-up messages.</small>
+            </div>
           </div>
         </div>
+
+        <div id="installCard" class="install-card hidden">
+          <span class="ic-ico">📲</span>
+          <h3>Install Souls Register</h3>
+          <p>Add it to your home screen — it opens full-screen like a normal app and works even without network.</p>
+          <button id="installCardBtn" class="btn btn-gold">Install now — it's free</button>
+          <small id="installHint">On Android Chrome: menu ⋮ → “Add to Home screen / Install app”.<br />On iPhone Safari: Share ⬆ → “Add to Home Screen”.</small>
+        </div>
+      </div>
+
+      <div class="welcome-footer">
+        <span class="gold">✝ Souls Register</span> · built for the Great Gospel Crusade<br />
+        Christ for all Nations · Calabar 2026 · “Plundering hell to populate heaven”
       </div>
     </section>
 
     <!-- ============ CAPTURE ============ -->
     <section id="view-capture" class="view active" aria-label="Capture">
+      <div id="installBanner" class="banner banner-install hidden"></div>
       <div id="syncBanner" class="banner hidden"></div>
 
       <div class="counter-strip">
@@ -166,6 +196,7 @@
       <div class="list-meta"><span id="recordsCount">0 records</span></div>
       <div id="recordsList" class="records-list"></div>
       <div id="recordsEmpty" class="empty hidden">
+        <span class="empty-ico">🕊</span>
         <p>No records yet.</p>
         <p class="empty-sub">Souls saved on this phone will appear here.</p>
       </div>
@@ -180,6 +211,7 @@
           <div class="stat"><b id="syncPending">0</b><span>Pending</span></div>
           <div class="stat"><b id="syncSheet">—</b><span>Central dump</span></div>
         </div>
+        <div class="progress" id="syncProgress"><i></i></div>
         <button id="syncNowBtn" class="btn btn-primary big">⟳ Sync now</button>
         <p id="lastSync" class="muted small">Never synced yet.</p>
       </div>

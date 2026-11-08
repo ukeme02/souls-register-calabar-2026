@@ -104,7 +104,7 @@ window.Auth = (function () {
   function renderButton(el) {
     const s = Settings.load();
     if (!s.clientId) {
-      el.innerHTML = '<p class="muted small">Add your Google OAuth Client ID in “Team Sheet connection” below to enable sign-in.</p>';
+      el.innerHTML = '<p class="muted small">Add your Google OAuth Client ID in the “Central dump connection” card below to enable sign-in.</p>';
       return;
     }
     if (!(window.google && window.google.accounts)) {
