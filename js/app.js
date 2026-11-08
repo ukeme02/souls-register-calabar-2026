@@ -187,17 +187,17 @@
     const decision = (form.querySelector('input[name="decision"]:checked') || {}).value || 'Salvation';
     const address = $('address').value.trim();
     const prayer = $('prayer').value.trim();
+    const counsellor = $('formCounsellor').value.trim();
     const s = Settings.load();
 
-    // validation
+    // Compulsory: name (first + surname), phone, address — everything else is optional.
     let ok = true;
     const mark = (el, bad) => { el.classList.toggle('invalid', bad); if (bad) ok = false; };
     mark($('firstName'), !first);
     mark($('surname'), !surname);
     mark(phoneInput, digitsOnly(phone).length < 10);
-    if (!gender) { toast('Please select gender', 'err'); ok = false; }
-    if (!s.counsellor) { toast('Set your name as Counsellor first (Settings)', 'err'); showView('settings'); return; }
-    if (!ok) { toast('Please complete the required fields', 'err'); return; }
+    mark($('address'), !address);
+    if (!ok) { toast('Please fill the required fields: name, phone, address', 'err'); return; }
 
     const nowIso = new Date().toISOString();
     const rec = {
@@ -221,14 +221,21 @@
     flash.classList.remove('hidden');
     setTimeout(() => flash.classList.add('hidden'), 3500);
 
+    // clear after save — keep gender/age/decision selections for speed
     ['firstName', 'middleName', 'surname', 'phone', 'address', 'prayer'].forEach((id) => { $(id).value = ''; });
+    $('formCounsellor').value = s.counsellor || ''; // re-prefill the optional default
     $('phoneWarn').classList.add('hidden');
     $('firstName').focus();
     refreshStats();
     document.dispatchEvent(new CustomEvent('app:record-saved'));
   });
 
-  $('counsellorChip').addEventListener('click', () => showView('settings'));
+  // optional counsellor: prefill the form field from the Settings default
+  function prefillCounsellor() {
+    const el = $('formCounsellor');
+    if (el && !el.value) el.value = Settings.load().counsellor || '';
+  }
+  prefillCounsellor();
 
   // ---------- records list ----------
   let recordsCache = [];
@@ -286,6 +293,7 @@
     ['age', 'Age group', ['0-12', '13-17', '18-24', '25-34', '35-44', '45+']],
     ['decision', 'Decision', ['Salvation', 'Rededication', 'Other']],
     ['address', 'Address', 'text'], ['prayer', 'Prayer request', 'text'],
+    ['counsellor', 'Counsellor', 'text'],
   ];
 
   async function renderModal() {
@@ -604,7 +612,6 @@
     $('setClientId').value = s.clientId;
     $('setAppsUrl').value = s.appsUrl;
     $('setSyncKey').value = s.syncKey;
-    $('counsellorName').textContent = s.counsellor || 'not set';
     $('deviceIdShort').textContent = s.deviceId;
     $('appVersion').textContent = APP_VERSION;
     const cfg = window.APP_CONFIG || {};
@@ -640,7 +647,7 @@
       appsUrl: $('setAppsUrl').value.trim(),
       syncKey: $('setSyncKey').value.trim(),
     });
-    $('counsellorName').textContent = Settings.load().counsellor || 'not set';
+    prefillCounsellor();
     toast('Settings saved ✓', 'ok');
     renderGsi();
     updateSyncBanner();
@@ -703,7 +710,7 @@
     }
     if ($('view-records').classList.contains('active')) refreshRecords();
   });
-  document.addEventListener('app:settings-changed', () => { $('counsellorName').textContent = Settings.load().counsellor || 'not set'; });
+  document.addEventListener('app:settings-changed', () => { prefillCounsellor(); });
 
   // expose for inline onclick in banner
   window.showView = showView;

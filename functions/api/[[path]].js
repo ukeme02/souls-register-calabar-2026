@@ -207,7 +207,7 @@ async function adminPage(request, env, keyOk, adminKey) {
       ).bind(like, like, like, like, like).all()
     : await env.DB.prepare('SELECT * FROM souls WHERE training = 0 ORDER BY server_time DESC LIMIT 500').all();
   const totals = await env.DB.prepare(
-    'SELECT COUNT(*) AS total, COUNT(DISTINCT phone) AS phones, COUNT(DISTINCT counsellor) AS workers FROM souls WHERE training = 0'
+    "SELECT COUNT(*) AS total, COUNT(DISTINCT phone) AS phones, COUNT(DISTINCT CASE WHEN counsellor <> '' THEN counsellor END) AS workers FROM souls WHERE training = 0"
   ).first();
   const trainRow = await env.DB.prepare('SELECT COUNT(*) AS c FROM souls WHERE training = 1').first();
   const trainingCount = trainRow ? trainRow.c : 0;

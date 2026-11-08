@@ -127,18 +127,25 @@
         </div>
 
         <div class="field">
-          <label for="middleName">Middle name <small>(optional)</small></label>
-          <input id="middleName" name="middleName" type="text" placeholder="e.g. Ifeoma" enterkeyhint="next" />
-        </div>
-
-        <div class="field">
           <label for="phone">Phone number <i>*</i></label>
           <input id="phone" name="phone" type="tel" inputmode="tel" placeholder="e.g. 0803 123 4567" enterkeyhint="next" required />
           <div id="phoneWarn" class="phone-warn hidden">⚠ This number is already saved on this phone.</div>
         </div>
 
         <div class="field">
-          <label>Gender <i>*</i></label>
+          <label for="address">Address <i>*</i></label>
+          <textarea id="address" name="address" rows="2" placeholder="Street, area, Calabar" enterkeyhint="next" required></textarea>
+        </div>
+
+        <p class="section-note">The fields below are optional — fill what you have.</p>
+
+        <div class="field">
+          <label for="middleName">Middle name</label>
+          <input id="middleName" name="middleName" type="text" placeholder="e.g. Ifeoma" enterkeyhint="next" />
+        </div>
+
+        <div class="field">
+          <label>Gender</label>
           <div class="segmented" id="genderGroup" role="radiogroup">
             <label class="seg"><input type="radio" name="gender" value="Male" /><span>Male</span></label>
             <label class="seg"><input type="radio" name="gender" value="Female" /><span>Female</span></label>
@@ -167,18 +174,14 @@
         </div>
 
         <div class="field">
-          <label for="address">Address <small>(optional)</small></label>
-          <input id="address" name="address" type="text" placeholder="Street, area, Calabar" enterkeyhint="next" />
-        </div>
-
-        <div class="field">
-          <label for="prayer">Prayer request <small>(optional)</small></label>
+          <label for="prayer">Prayer request</label>
           <textarea id="prayer" name="prayer" rows="2" placeholder="Anything they want prayer for…"></textarea>
         </div>
 
-        <button type="button" id="counsellorChip" class="counsellor-chip" title="Tap to change in Settings">
-          👤 Counsellor: <b id="counsellorName">not set</b> <span>· tap to change</span>
-        </button>
+        <div class="field">
+          <label for="formCounsellor">Counsellor <small>(optional — who counselled this soul? leave empty if unknown)</small></label>
+          <input id="formCounsellor" name="formCounsellor" type="text" placeholder="e.g. Joy Effiom" enterkeyhint="done" />
+        </div>
 
         <button type="submit" id="saveBtn" class="save-btn">SAVE&nbsp;✓</button>
         <div id="saveFlash" class="save-flash hidden" aria-live="polite"></div>
@@ -238,7 +241,7 @@
       <div class="card">
         <h2>Counsellor</h2>
         <div class="field">
-          <label for="setCounsellor">Your name (attached to every soul you save)</label>
+          <label for="setCounsellor">Default counsellor name <small>(optional — just prefills the form; clear it if the ICT team fills forms instead)</small></label>
           <input id="setCounsellor" type="text" placeholder="e.g. Joy Effiom" />
         </div>
       </div>

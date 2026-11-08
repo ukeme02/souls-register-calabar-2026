@@ -156,6 +156,11 @@ input::placeholder, textarea::placeholder { color: #a6adc4; }
   font-size: 13px; font-weight: 700; border-radius: var(--r-sm); padding: 9px 11px;
   animation: viewIn 0.15s ease-out;
 }
+.section-note {
+  margin: 2px 0 12px; font-size: 12px; font-weight: 700; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.6px;
+  border-top: 1px dashed var(--line); padding-top: 10px;
+}
 
 /* Segmented + chips */
 .segmented { display: flex; gap: 8px; }
